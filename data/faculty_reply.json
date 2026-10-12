@@ -1,0 +1,15 @@
+{
+  "professors": [
+    {"name": "Dr. Kwame Mensah", "department": "Computer Science", "email": "kmensah@university.edu",
+     "office": "CS 305", "courses": ["COSC 330", "COSC 369", "COSC 631"], "office_hours": [],
+     "notes": "Office hours to be scheduled by the department."},
+    {"name": "Dr. Linda Okafor", "department": "Computer Science", "email": "lokafor@university.edu",
+     "office": "CS 214", "courses": ["COSC 110", "COSC 241", "COSC 450"],
+     "office_hours": [
+       {"day": "Monday", "start_time": "13:00", "end_time": "15:00", "course_code": "COSC 241"},
+       {"day": "Wednesday", "start_time": "13:00", "end_time": "15:00", "course_code": "COSC 241"},
+       {"day": "Thursday", "start_time": "10:00", "end_time": "12:00", "course_code": "COSC 450"}
+     ],
+     "notes": null}
+  ]
+}

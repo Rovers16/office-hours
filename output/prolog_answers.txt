@@ -1,0 +1,40 @@
+Who teaches COSC 369?
+  Dr. Kwame Mensah
+
+Which office hours are on Wednesday?
+  Dr. Kwame Mensah: 10:45 AM - 1:00 PM (COSC 330)
+  Dr. Linda Okafor: 1:00 PM - 3:00 PM (COSC 241)
+  Dr. Kwame Mensah: 3:00 PM - 5:00 PM (COSC 631)
+
+What is Dr. Kwame Mensah's week?
+  Monday:    class   9:30 AM - 10:45 AM  COSC 330 in CS 311
+             office  10:45 AM - 1:00 PM (COSC 330)
+  Tuesday:   class   9:30 AM - 10:45 AM  COSC 369 in CS 108
+             office  10:45 AM - 1:00 PM (COSC 369)
+  Wednesday: class   9:30 AM - 10:45 AM  COSC 330 in CS 311
+             office  10:45 AM - 1:00 PM (COSC 330)
+             office  3:00 PM - 5:00 PM (COSC 631)
+             class   5:00 PM - 7:30 PM  COSC 631 in CS 313
+  Thursday:  class   9:30 AM - 10:45 AM  COSC 369 in CS 108
+             office  10:45 AM - 1:00 PM (COSC 369)
+  Office hours per week: 11 h, generated
+
+Can I see Dr. Kwame Mensah on Wednesday at 11:30 AM?
+  Yes - office hours 10:45 AM - 1:00 PM (COSC 330).
+
+Can I see Dr. Kwame Mensah on Tuesday at 10:00 AM?
+  No - they are teaching then (instructors are not to be interrupted).
+
+Where and when does COSC 330 meet?
+  Monday     9:30 AM - 10:45 AM in CS 311
+  Wednesday  9:30 AM - 10:45 AM in CS 311
+
+When can students get help with COSC 631?
+  Wednesday  3:00 PM - 5:00 PM with Dr. Kwame Mensah
+
+Which weekdays does each professor have no classes or office hours?
+  Dr. Kwame Mensah: Friday
+  Dr. Linda Okafor: none
+
+Do any office hours overlap a class?
+  No - every office hour is outside class time.

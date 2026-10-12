@@ -1,0 +1,47 @@
+=======================================================================================
+Dr. Kwame Mensah
+Department: Computer Science
+Office:     CS 305
+Email:      kmensah@university.edu
+=======================================================================================
+
+CLASS SCHEDULE
+Course                              Times                                    Location
+---------------------------------------------------------------------------------------
+COSC 631 (Database management)      Wednesday 5:00 PM to 7:30 PM             CS 313
+COSC 369 (Software Engineering I)   Tuesday & Thursday 9:30 AM to 10:45 AM   CS 108
+COSC 330 (Systems Programming I)    Monday & Wednesday 9:30 AM to 10:45 AM   CS 311
+
+OFFICE HOURS (generated)
+    Monday:    10:45 AM - 1:00 PM (COSC 330)
+    Tuesday:   10:45 AM - 1:00 PM (COSC 369)
+    Wednesday: 10:45 AM - 1:00 PM (COSC 330)
+               & 3:00 - 5:00 PM (COSC 631)
+    Thursday:  10:45 AM - 1:00 PM (COSC 369)
+    Friday:
+
+NOTE: Instructors are not to be interrupted during class times.
+
+===================================================================================================
+Dr. Linda Okafor
+Department: Computer Science
+Office:     CS 214
+Email:      lokafor@university.edu
+===================================================================================================
+
+CLASS SCHEDULE
+Course                                 Times                                             Location
+---------------------------------------------------------------------------------------------------
+COSC 241 (Data Structures)             Monday, Wednesday & Friday 11:00 AM to 11:50 AM   CS 210
+COSC 450 (Operating Systems)           Tuesday & Thursday 2:00 PM to 3:15 PM             CS 108
+COSC 110 (Introduction to Computing)   TBA                                               Online
+
+OFFICE HOURS (provided by the lecturer)
+    Monday:    1:00 - 3:00 PM (COSC 241)
+    Tuesday:
+    Wednesday: 1:00 - 3:00 PM (COSC 241)
+    Thursday:  10:00 AM - 12:00 PM (COSC 450)
+    Friday:
+
+NOTE: Instructors are not to be interrupted during class times.
+
