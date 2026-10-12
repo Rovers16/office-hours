@@ -4,6 +4,8 @@ COSC 369 project: a C program that builds each professor's teaching schedule
 and office-hours schedule from two input files: a syllabus / class schedule
 and a faculty file.
 
+The project report is [`report/report.pdf`](report/report.pdf).
+
 ## Quick start
 
 ```bash
@@ -14,6 +16,7 @@ make test                         # check the report and the Prolog answers agai
 make run                          # print the report on the screen
 make ask                          # answer the sample questions with Prolog
 make clean                        # remove build/ and output/
+make report                       # rebuild the PDF report (report/report.html -> report/report.pdf)
 ```
 
 `make` produces:

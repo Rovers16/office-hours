@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Office-Hours Schedule Generator - Project Report</title>
+<style>
+  @page { size: Letter; margin: 0.9in 0.9in 0.85in 0.9in; }
+  :root {
+    --ink: #1d232b;
+    --muted: #5b6573;
+    --rule: #c9d0d8;
+    --accent: #1f4e79;
+    --code-bg: #f3f5f8;
+  }
+  html { font-family: "Bitstream Charter", "Caladea", "Liberation Serif", serif; font-size: 10.6pt; color: var(--ink); background: #fff; }
+  body { margin: 0; line-height: 1.42; }
+  h1, h2, h3, .title, .subtitle, th, figcaption, .label { font-family: "Inter", "Liberation Sans", sans-serif; }
+  h2 { font-size: 14pt; color: var(--accent); margin: 22pt 0 6pt; padding-bottom: 3pt; border-bottom: 1px solid var(--rule); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 14pt 0 4pt; break-after: avoid; }
+  p { margin: 0 0 7pt; text-align: justify; hyphens: auto; }
+  ul, ol { margin: 0 0 8pt; padding-left: 18pt; }
+  li { margin-bottom: 2.5pt; }
+  code, pre, .mono { font-family: "DejaVu Sans Mono", "Liberation Mono", monospace; font-size: 8.4pt; }
+  code { background: var(--code-bg); padding: 0 2pt; border-radius: 2pt; }
+  pre { background: var(--code-bg); border: 1px solid #e1e6ec; border-radius: 3pt; padding: 7pt 9pt; margin: 4pt 0 10pt; line-height: 1.32; white-space: pre-wrap; break-inside: avoid; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; font-size: 9.4pt; break-inside: avoid; }
+  th { text-align: left; font-size: 8.6pt; font-weight: 600; color: var(--accent); border-bottom: 1.4px solid var(--accent); padding: 3pt 6pt 3pt 0; }
+  td { vertical-align: top; border-bottom: 1px solid #e3e7ec; padding: 3pt 6pt 3pt 0; }
+  td code { font-size: 8pt; }
+  figure { margin: 8pt 0 12pt; break-inside: avoid; }
+  figcaption { font-size: 8.6pt; color: var(--muted); margin-top: 4pt; }
+  .note { border-left: 3px solid var(--accent); background: #f2f6fa; padding: 6pt 10pt; margin: 6pt 0 10pt; font-size: 9.8pt; break-inside: avoid; }
+  .note p:last-child { margin-bottom: 0; }
+
+  /* title block */
+  .titlepage { padding-top: 1.1in; break-after: page; }
+  .course { font-family: "Inter", sans-serif; font-size: 10pt; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .title { font-size: 25pt; font-weight: 700; line-height: 1.15; margin: 10pt 0 8pt; color: var(--ink); }
+  .subtitle { font-size: 12.5pt; color: var(--accent); margin-bottom: 30pt; }
+  .meta { font-size: 10.5pt; border-top: 1px solid var(--rule); padding-top: 10pt; }
+  .meta td { border: none; padding: 2pt 14pt 2pt 0; }
+  .meta td:first-child { color: var(--muted); width: 1.3in; font-family: "Inter", sans-serif; font-size: 9pt; }
+  .abstract { margin-top: 34pt; font-size: 10.4pt; }
+  .abstract .label { font-weight: 600; font-size: 9pt; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 4pt; }
+  .toc { margin-top: 26pt; font-size: 9.8pt; columns: 2; column-gap: 24pt; }
+  .toc ol { margin: 0; padding-left: 16pt; }
+
+  svg text { font-family: "Inter", "Liberation Sans", sans-serif; }
+  .two-col { display: flex; gap: 14pt; }
+  .two-col > * { flex: 1; min-width: 0; }
+  .shot { border: 1px solid var(--rule); width: 100%; }
+  .page-break { break-before: page; }
+</style>
+</head>
+<body>
+
+<!-- ===================================================================== -->
+<section class="titlepage">
+  <div class="course">COSC 369 &middot; Software Engineering I &middot; First Project</div>
+  <div class="title">Professor Teaching and<br>Office-Hours Schedule Generator</div>
+  <div class="subtitle">Design and implementation report</div>
+
+  <table class="meta">
+    <tr><td>Student</td><td>[Your name]</td></tr>
+    <tr><td>Student ID</td><td>[Your ID]</td></tr>
+    <tr><td>Instructor</td><td>[Instructor's name]</td></tr>
+    <tr><td>Date</td><td>October 2026</td></tr>
+    <tr><td>Repository</td><td><span class="mono">github.com/Rovers16/office-hours</span></td></tr>
+  </table>
+
+  <div class="abstract">
+    <div class="label">Summary</div>
+    <p>This project automatically produces each professor's teaching schedule and
+    office-hours schedule from two input files: a syllabus / class-schedule file and a
+    faculty file. The scheduling program is written in C and organised into five modules
+    that are archived into a static library, <code>libofficehours.a</code>, and linked
+    with a small <code>main</code> program. A Makefile automates the whole process:
+    compiling, building the library, linking, preparing the inputs, running the program,
+    and generating a Word document. Python is used at the edges of the system. On the
+    input side, Claude extracts the data from syllabi in any layout. On the output side,
+    Python lays out the Word document and connects to a Prolog knowledge base that answers
+    questions such as <em>"Who teaches COSC 369?"</em> and <em>"Which office hours are on
+    Wednesday?"</em>. With the sample data, the generated office hours match the sample
+    tables in the assignment exactly.</p>
+  </div>
+
+  <div class="toc">
+    <ol>
+      <li>Requirements</li>
+      <li>System overview</li>
+      <li>The two input files</li>
+      <li>Reading syllabi in any format</li>
+      <li>C program design</li>
+      <li>Office-hour scheduling algorithm</li>
+      <li>Static library</li>
+      <li>Makefile</li>
+      <li>Prolog knowledge base</li>
+      <li>Output</li>
+      <li>Testing</li>
+      <li>Compiling and running</li>
+      <li>Limitations and future work</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<h2>1. Requirements</h2>
+<p>The assignment asks for a C system that reads exactly two input files and generates a
+professor teaching schedule and an office-hours schedule. The output should look like the
+sample tables in the specification, without hard-coding them. The solution must:</p>
+<ul>
+  <li>be organised into modules, with a <strong>static library</strong> that the main program links against;</li>
+  <li>provide a <strong>Makefile</strong> that compiles the code, creates the library, links it, and generates the final output, optionally using Python to produce Word or Excel documents;</li>
+  <li>use Python to read the syllabi and generate <strong>Prolog facts</strong>, with Prolog storing the knowledge and answering questions;</li>
+  <li>explain static libraries, the Makefile, and where the input files are stored and why.</li>
+</ul>
+<p>An additional goal was that the system should read a syllabus <em>however it is
+formatted</em>. Real syllabi mix tables, paragraphs and abbreviations such as
+&ldquo;MWF 11:00&ndash;11:50am&rdquo;, so a parser written for one layout would fail on the
+next. Section&nbsp;4 explains how this is handled.</p>
+
+<!-- ===================================================================== -->
+<h2>2. System overview</h2>
+<p>The system is a pipeline of four stages. Each stage reads files and writes files, so
+the stages can be built, tested and replaced independently, and <code>make</code> can tell
+which stages are out of date.</p>
+
+<figure>
+<svg viewBox="0 0 700 250" width="100%" role="img" aria-label="Pipeline from input files through Claude, the C program, to reports and Prolog">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b6573"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill: #fff; stroke: #9aa6b4; stroke-width: 1; }
+    .stage { fill: #eaf1f8; stroke: #1f4e79; stroke-width: 1.2; }
+    .t { font-size: 10px; fill: #1d232b; }
+    .s { font-size: 8.5px; fill: #5b6573; }
+    .h { font-size: 8.5px; fill: #1f4e79; font-weight: 600; letter-spacing: .04em; }
+    .ln { stroke: #5b6573; stroke-width: 1.1; fill: none; marker-end: url(#arr); }
+  </style>
+
+  <text class="h" x="10" y="14">INPUT</text>
+  <text class="h" x="150" y="14">1 &middot; EXTRACT (Python + Claude)</text>
+  <text class="h" x="350" y="14">2 &middot; SCHEDULE (C)</text>
+  <text class="h" x="520" y="14">3 &middot; DOCUMENT / 4 &middot; QUESTIONS</text>
+
+  <rect class="box" x="10" y="30" width="120" height="40" rx="4"/>
+  <text class="t" x="18" y="47">syllabus file</text>
+  <text class="s" x="18" y="61">PDF, Word or text</text>
+  <rect class="box" x="10" y="90" width="120" height="40" rx="4"/>
+  <text class="t" x="18" y="107">faculty file</text>
+  <text class="s" x="18" y="121">any layout</text>
+
+  <rect class="stage" x="150" y="30" width="170" height="100" rx="5"/>
+  <text class="t" x="160" y="50">syllabus_reader.py</text>
+  <text class="s" x="160" y="66">Claude returns JSON in a fixed</text>
+  <text class="s" x="160" y="78">schema; it is validated, then</text>
+  <text class="s" x="160" y="90">written as .psv (for C) and</text>
+  <text class="s" x="160" y="102">.pl (for Prolog).</text>
+  <text class="s" x="160" y="120">saved replies: data/*.json</text>
+
+  <rect class="stage" x="350" y="30" width="150" height="100" rx="5"/>
+  <text class="t" x="360" y="50">officehours</text>
+  <text class="s" x="360" y="66">main.c linked with</text>
+  <text class="s" x="360" y="78">libofficehours.a:</text>
+  <text class="s" x="360" y="90">load &rarr; match &rarr; assign</text>
+  <text class="s" x="360" y="102">&rarr; report</text>
+
+  <rect class="box" x="530" y="30" width="140" height="28" rx="4"/>
+  <text class="t" x="538" y="48">office_hours.txt</text>
+  <rect class="box" x="530" y="68" width="140" height="28" rx="4"/>
+  <text class="t" x="538" y="86">office_hours.csv</text>
+  <rect class="box" x="530" y="106" width="140" height="28" rx="4"/>
+  <text class="t" x="538" y="124">office_hours.pl</text>
+
+  <rect class="stage" x="530" y="160" width="140" height="34" rx="5"/>
+  <text class="t" x="538" y="174">make_docx.py</text>
+  <text class="s" x="538" y="187">&rarr; office_hours.docx</text>
+
+  <rect class="stage" x="350" y="160" width="150" height="80" rx="5"/>
+  <text class="t" x="360" y="178">Prolog (SWI) + ask.py</text>
+  <text class="s" x="360" y="194">facts + prolog/rules.pl</text>
+  <text class="s" x="360" y="206">&ldquo;Who teaches COSC 369?&rdquo;</text>
+  <text class="s" x="360" y="218">&ldquo;Office hours on Wednesday?&rdquo;</text>
+
+  <path class="ln" d="M130,50 H148"/>
+  <path class="ln" d="M130,110 H148"/>
+  <path class="ln" d="M320,80 H348"/>
+  <path class="ln" d="M500,60 L528,44"/>
+  <path class="ln" d="M500,80 L528,82"/>
+  <path class="ln" d="M500,100 L528,120"/>
+  <path class="ln" d="M670,82 H688 V177 H672"/>
+  <path class="ln" d="M530,124 C515,140 505,160 502,175"/>
+  <path class="ln" d="M235,130 C235,200 280,200 348,200"/>
+</svg>
+<figcaption>Figure 1. Data flow. Rounded blue boxes are programs; white boxes are files.
+The schedule.pl and faculty.pl facts from stage 1, and the office_hours.pl facts from
+stage 2, are all loaded by Prolog.</figcaption>
+</figure>
+
+<p>The responsibilities are split deliberately. <strong>All scheduling decisions are made
+in C</strong>, as the assignment requires. Python is used only where it is clearly the better
+tool: talking to an AI service and parsing its JSON, producing a <code>.docx</code> file,
+and bridging to Prolog. Every stage writes plain text files. This makes each one easy to
+inspect by hand, which helped a great deal during debugging.</p>
+
+<!-- ===================================================================== -->
+<h2>3. The two input files</h2>
+<p>The C program, <code>officehours</code>, takes exactly two input files. It refuses to
+run with any other number:</p>
+<pre>build/officehours [options] SCHEDULE_FILE FACULTY_FILE</pre>
+<p>Both files are pipe-separated text, one record per line. This format is trivial to parse
+in C (<code>fgets</code> plus a field splitter) and easy to read and edit by hand. Lines
+starting with <code>#</code> are comments.</p>
+<pre># schedule file
+COURSE|code|title|section|lecturer|days|start|end|room
+COURSE|COSC 369|Software Engineering I||Dr. Mensah|Tuesday,Thursday|09:30|10:45|CS 108
+
+# faculty file
+PROF|name|department|email|office|course,course,...
+PROF|Dr. Linda Okafor|Computer Science|lokafor@university.edu|CS 214|COSC 110,COSC 241,COSC 450
+OFFICE_HOUR|name|day|start|end|course
+OFFICE_HOUR|Dr. Linda Okafor|Monday|13:00|15:00|COSC 241</pre>
+<p>Times use 24-hour <code>HH:MM</code> and are stored internally as minutes after midnight,
+so comparing and adding times is plain integer arithmetic. Empty fields are allowed: a
+course with no lecturer or no meeting time, for example an online course, is valid.
+<code>strtok()</code> was <em>not</em> used to split fields, because it merges consecutive
+separators and would silently shift every field after an empty one. A small splitter in
+<code>loader.c</code> keeps empty fields instead. Every line is validated, and errors are
+reported with the file name and line number, for example
+<code>bad.psv:1: bad time '25:00' (expected HH:MM)</code>.</p>
+
+<p>The faculty file is also where a lecturer can supply their own office-hours table. The
+specification says the program should process &ldquo;office-hours tables provided by the
+lecturer&rdquo;. When a professor has <code>OFFICE_HOUR</code> lines, those hours are used.
+Otherwise the program generates office hours itself (Section&nbsp;6).</p>
+
+<h3>3.1 Local files or the Internet?</h3>
+<p>The input files are <strong>stored locally</strong> in the project: the original
+human-written files in <code>input/</code> and the structured data extracted from them in
+<code>data/</code>. The program opens them with ordinary <code>fopen()</code> calls on paths
+given on the command line, and the Makefile passes relative paths inside the project.</p>
+<p>The reasons for this choice are:</p>
+<ul>
+  <li><strong>Reliability on the lab computer.</strong> <code>make</code> works with no
+  Internet connection and no account or API key. A department web page could be down,
+  moved, or reformatted on the day of the demonstration.</li>
+  <li><strong>Reproducibility.</strong> The same inputs always give the same output, which
+  is what makes the automated test in Section&nbsp;11 possible.</li>
+  <li><strong>Simplicity and safety in C.</strong> Downloading would need an HTTP library
+  such as libcurl, extra error handling, and code to parse untrusted remote content inside
+  the C program.</li>
+</ul>
+<p>The Internet is used in exactly one optional place: turning a <em>new</em> syllabus into
+structured data with Claude (Section&nbsp;4). That happens once per syllabus, and the result
+is saved locally. A department that publishes its schedule online would simply download the
+file into <code>input/</code> and re-run that step.</p>
+
+<!-- ===================================================================== -->
+<h2>4. Reading syllabi in any format</h2>
+<p>Syllabi do not share a format. The sample schedule in the assignment is a table, while
+other courses describe their meetings in sentences (&ldquo;COSC 450 Operating Systems meets
+TTh 2:00-3:15 PM in CS 108&rdquo;). Rather than writing fragile parsing rules,
+<code>syllabus_reader.py</code> gives the file to Claude, a large language model, and asks
+for the data back in one <strong>fixed JSON structure</strong>. The structure is defined once in
+Python with Pydantic models:</p>
+<pre>class Course(BaseModel):
+    code: str                   # "COSC 369"
+    title: str
+    section: Optional[str]
+    lecturer: Optional[str]
+    days: List[Day]             # "Monday" ... "Sunday" only
+    start_time: Optional[str]   # "09:30" (24-hour)
+    end_time: Optional[str]
+    room: Optional[str]
+    notes: Optional[str]</pre>
+<p>Claude is instructed to expand abbreviations (<code>MWF</code> &rarr; Monday, Wednesday,
+Friday), convert times to 24-hour format, and use <code>null</code> rather than invent
+anything the file does not state. Whatever comes back is <strong>validated against the
+schema</strong> before it is used. A missing field or an invalid day name is reported as an
+error instead of flowing silently into the C program. The validated data is then written in
+three formats: <code>.psv</code> for C, <code>.pl</code> facts for Prolog, and
+<code>.json</code>.</p>
+
+<p>There are two ways to run this step, and both produce identical files:</p>
+<table>
+  <tr><th style="width:22%">Mode</th><th>How it works</th><th style="width:25%">Cost / requirements</th></tr>
+  <tr><td><strong>Chat mode</strong> (default)</td>
+      <td><code>syllabus_reader.py syllabus --prompt</code> prints the instructions and the
+      JSON schema. The user pastes them into the claude.ai chat with the file attached, and
+      saves the reply in <code>data/</code>. <code>--from-json</code> validates the saved
+      reply and converts it; extra text or code fences around the JSON are tolerated.</td>
+      <td>Free claude.ai account; one manual step per syllabus.</td></tr>
+  <tr><td><strong>API mode</strong> (<code>make MODE=api</code>)</td>
+      <td>The file is sent to the Claude API: PDF files directly, Word files as extracted
+      text including tables. Structured outputs force the reply to match the schema.</td>
+      <td>An Anthropic API key; billed per request.</td></tr>
+</table>
+<p>Chat mode exists because the free claude.ai plan has no programming interface, and
+automating the website would break its terms of use and break whenever the site changes.
+Splitting the work into &ldquo;Claude reads the file&rdquo; and &ldquo;the program processes
+the result&rdquo; keeps the system free to run while still handling any syllabus layout.</p>
+
+<!-- ===================================================================== -->
+<h2>5. C program design</h2>
+<p>The C code is split into modules by responsibility. Each module has a header in
+<code>include/</code> that declares only what other modules need. Functions used only inside
+a module are <code>static</code>.</p>
+<table>
+  <tr><th style="width:21%">Module</th><th>Responsibility</th><th style="width:31%">Main functions</th></tr>
+  <tr><td><code>model.c / .h</code></td><td>Shared data structures (<code>Course</code>, <code>Professor</code>, <code>OfficeHour</code>, <code>Schedule</code>, <code>Faculty</code>); growable arrays; comparing course codes and person names.</td><td><code>schedule_add</code>, <code>faculty_add</code>, <code>same_course_code</code>, <code>same_person</code></td></tr>
+  <tr><td><code>timeutil.c / .h</code></td><td>Converting between text and numbers: <code>"09:30"</code> &harr; 570 &harr; <code>"9:30 AM"</code>, day names, day lists such as <code>"Monday, Wednesday &amp; Friday"</code>.</td><td><code>parse_time</code>, <code>format_time</code>, <code>parse_day_list</code>, <code>format_day_list</code></td></tr>
+  <tr><td><code>loader.c / .h</code></td><td>Reading and validating the two input files.</td><td><code>load_schedule</code>, <code>load_faculty</code></td></tr>
+  <tr><td><code>scheduler.c / .h</code></td><td>Matching professors to course sections; generating office hours or checking the ones lecturers provided.</td><td><code>match_courses</code>, <code>assign_office_hours</code>, <code>default_policy</code></td></tr>
+  <tr><td><code>report.c / .h</code></td><td>Writing the results as a text report, a CSV file and Prolog facts.</td><td><code>write_text_report</code>, <code>write_csv_report</code>, <code>write_prolog_facts</code></td></tr>
+  <tr><td><code>main.c</code></td><td>Command-line options, opening files, calling the library in order, exit status.</td><td><code>main</code></td></tr>
+</table>
+<p>The dependencies between modules point one way only. <code>model</code> depends on
+nothing; <code>timeutil</code> uses <code>model</code>; <code>loader</code>,
+<code>scheduler</code> and <code>report</code> use both; <code>main</code> uses all of them.
+There are no cycles, so each module can be understood and tested on its own.</p>
+
+<h3>5.1 Data representation</h3>
+<ul>
+  <li><strong>Times</strong> are integers (minutes after midnight). <code>NO_TIME</code> (-1)
+  marks an online course or a time that has not been announced.</li>
+  <li><strong>Meeting days</strong> are a 7-bit mask (bit 0 = Monday), so &ldquo;does this
+  course meet on Wednesday?&rdquo; is a single <code>&amp;</code>.</li>
+  <li><strong>The lists of courses and professors</strong> grow with <code>realloc</code>
+  (doubling), so there is no fixed limit on the size of a department. Per-professor lists
+  have fixed maximums (16 sections, 32 office-hour blocks). Exceeding them is reported,
+  never overflowed. All string copies go through <code>copy_field</code>, which always
+  terminates the string and never writes past the buffer.</li>
+</ul>
+
+<h3>5.2 Matching professors to courses</h3>
+<p>The syllabus and the faculty file are written separately, so names rarely match exactly.
+The syllabus may say &ldquo;Dr. Mensah&rdquo; while the faculty file says &ldquo;Dr. Kwame
+Mensah&rdquo;. <code>same_person</code> splits both names into lower-case words, ignores
+titles such as Dr. and Prof., and accepts the match when every word of the shorter name
+appears in the longer one. A section belongs to a professor if the syllabus names them as
+its lecturer. If the syllabus names nobody, the professor's course list in the faculty file
+decides. Course codes are compared ignoring case, spaces and punctuation, so
+<code>COSC 369</code>, <code>cosc369</code> and <code>COSC-369</code> are the same course.
+A section nobody teaches is reported as a warning rather than silently dropped.</p>
+
+<!-- ===================================================================== -->
+<h2>6. Office-hour scheduling algorithm</h2>
+<p>The specification's sample shows the pattern to follow. Office hours start when a class
+ends (10:45 AM after a 9:30&ndash;10:45 class), and an evening class gets office hours
+<em>before</em> it (3:00&ndash;5:00 PM before a 5:00 PM class). It also states that
+instructors are not to be interrupted during class time. The algorithm turns these
+observations into rules.</p>
+
+<p><strong>Lecturer-supplied hours.</strong> If the faculty file contains office hours for a
+professor, they are kept exactly as given. Each one is checked against that professor's
+classes, and any overlap is printed as a warning.</p>
+
+<p><strong>Generated hours.</strong> Otherwise, every class meeting is processed in week
+order (day, then start time), so morning blocks are placed before afternoon ones. For each
+meeting:</p>
+<ol>
+  <li>Build the professor's <em>busy list</em> for that day: their classes plus the office
+  hours placed so far.</li>
+  <li><strong>After the class:</strong> find how long the professor is free from the moment
+  the class ends, up to the next busy item or the end of the day (5:00 PM). Use up to 135
+  minutes of that gap.</li>
+  <li><strong>Before the class</strong>, if there was no room after it: find how long they
+  are free before the class starts, back to the previous busy item or 8:00 AM. Use up to 120
+  minutes of that gap.</li>
+  <li>Gaps shorter than 30 minutes are not worth scheduling. If neither gap is long enough,
+  a warning is printed for that meeting.</li>
+</ol>
+<p>Because the busy list always includes the classes, a generated block can never overlap a
+class or another block. All five numbers (135, 120, 30, 8:00, 17:00) live in a
+<code>Policy</code> structure and can be changed from the command line, for example
+<code>--after 120 --day-end 18:00</code>, without recompiling.</p>
+
+<h3>6.1 Worked example</h3>
+<p>Dr. Mensah teaches COSC 330 (MW 9:30&ndash;10:45), COSC 369 (TTh 9:30&ndash;10:45) and
+COSC 631 (W 5:00&ndash;7:30 PM).</p>
+<table>
+  <tr><th style="width:24%">Meeting</th><th>Decision</th><th style="width:22%">Block</th></tr>
+  <tr><td>Mon COSC 330</td><td>Free from 10:45 until 5:00 PM; take 135 min.</td><td>10:45 AM &ndash; 1:00 PM</td></tr>
+  <tr><td>Tue / Thu COSC 369</td><td>Same reasoning.</td><td>10:45 AM &ndash; 1:00 PM</td></tr>
+  <tr><td>Wed COSC 330</td><td>Same reasoning.</td><td>10:45 AM &ndash; 1:00 PM</td></tr>
+  <tr><td>Wed COSC 631</td><td>Ends at 7:30 PM, after the 5:00 PM limit, so there is no room after. Before: free since 1:00 PM (the end of the previous block); take 120 min ending at 5:00 PM.</td><td>3:00 &ndash; 5:00 PM</td></tr>
+</table>
+<p>This reproduces the sample office-hours table in the assignment exactly, including the
+Wednesday &ldquo;&amp; 3:00 &ndash; 5:00 PM (COSC 631)&rdquo; line and the empty Friday. The
+table was not copied into the program; it follows from the rules.</p>
+
+<!-- ===================================================================== -->
+<h2>7. Static library</h2>
+<p>A <strong>static library</strong> is an archive of compiled object files (<code>.o</code>)
+with an index of the functions they define. On Unix it is named <code>lib<em>name</em>.a</code>.
+When a program is linked against it, the linker copies the object code the program actually
+uses into the executable. The finished program therefore does not need the library file at
+run time.</p>
+
+<p><strong>Creating it.</strong> Each library module is compiled on its own into an object
+file, without linking (<code>-c</code>). The objects are then archived with
+<code>ar</code>:</p>
+<pre>gcc -Iinclude -std=c99 -Wall -Wextra -pedantic -O2 -c src/model.c -o build/model.o
+...                                                   (timeutil, loader, scheduler, report)
+ar rcs build/libofficehours.a build/model.o build/timeutil.o build/loader.o \
+                              build/scheduler.o build/report.o</pre>
+<p>The flags mean: <code>r</code> inserts or replaces members, <code>c</code> creates the
+archive without a warning, and <code>s</code> writes the symbol index the linker uses to find
+functions. <code>ar t build/libofficehours.a</code> lists the five members, and
+<code>nm</code> shows the public functions they provide (<code>load_schedule</code>,
+<code>assign_office_hours</code>, <code>write_text_report</code>, &hellip;).</p>
+
+<p><strong>Linking it.</strong></p>
+<pre>gcc build/main.o -Lbuild -lofficehours -o build/officehours</pre>
+<p><code>-L build</code> adds a directory to the linker's search path, and
+<code>-lofficehours</code> means &ldquo;look for <code>libofficehours.a</code>&rdquo;. Order
+matters: the library is listed <em>after</em> <code>main.o</code>. The linker only takes
+from an archive the members that resolve symbols it is still missing, so it must already have
+seen <code>main.o</code>'s calls by the time it reaches the library.</p>
+
+<p><strong>Static versus shared.</strong> A shared library (<code>.so</code>) is not copied
+into the program; it is loaded when the program starts. Shared libraries save disk space
+and memory when many programs use them, and they can be updated without relinking. However,
+the program then needs the <code>.so</code> to be present at run time. For a self-contained
+program that must run on a lab computer, a static library is simpler and more robust.
+Building the library separately also makes the scheduling code reusable. A different front
+end, such as a web service or a unit-test driver, could link the same
+<code>libofficehours.a</code> without touching <code>main.c</code>.</p>
+
+<!-- ===================================================================== -->
+<h2>8. Makefile</h2>
+<p>A Makefile is a list of <strong>rules</strong>. Each rule names a <em>target</em> (a file
+to produce), the <em>prerequisites</em> it depends on, and the <em>commands</em> that rebuild
+it:</p>
+<pre>$(LIB): $(LIB_OBJS)
+	$(AR) $(ARFLAGS) $@ $^          # $@ = the target, $^ = all prerequisites</pre>
+<p><code>make</code> builds the requested target by walking this dependency graph. A target
+is rebuilt only if it is missing or <em>older</em> than one of its prerequisites. The result
+is that after a change, only the affected steps run. For example, after editing
+<code>timeutil.h</code>, <code>make</code> recompiles the five source files that include it
+(<code>model.c</code> does not), re-archives the library, relinks, and regenerates the
+reports. Running <code>make</code> again immediately prints &ldquo;Nothing to be done&rdquo;.
+To make this work, every object file lists the headers it includes:</p>
+<pre>$(BUILD_DIR)/scheduler.o: $(SRC_DIR)/scheduler.c include/scheduler.h include/model.h include/timeutil.h
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $&lt; -o $@</pre>
+<p>The second rule is a <em>pattern rule</em> that compiles any <code>.c</code> file into a
+<code>.o</code>. The <code>| $(BUILD_DIR)</code> part is an <em>order-only</em> prerequisite:
+the directory must exist, but its timestamp changing does not force a rebuild.</p>
+
+<p><strong>Automating the whole pipeline.</strong> The rules continue past compilation, so a
+single <code>make</code> carries the work from the input files to the final document:</p>
+<pre>data/*.json          ─▶ syllabus_reader.py ─▶ build/schedule.psv, build/faculty.psv
+src/*.c              ─▶ gcc -c ─▶ *.o ─▶ ar ─▶ libofficehours.a ─▶ link ─▶ officehours
+officehours + inputs ─▶ output/office_hours.txt, .csv, .pl
+office_hours.csv     ─▶ make_docx.py ─▶ output/office_hours.docx</pre>
+
+<table>
+  <tr><th style="width:26%">Command</th><th>What it does</th></tr>
+  <tr><td><code>make</code></td><td>Everything: library, program, reports, Word document, Prolog facts.</td></tr>
+  <tr><td><code>make lib</code></td><td>Only <code>build/libofficehours.a</code>.</td></tr>
+  <tr><td><code>make run</code></td><td>Prints the report on the screen.</td></tr>
+  <tr><td><code>make ask</code></td><td>Answers the sample questions with Prolog.</td></tr>
+  <tr><td><code>make test</code></td><td>Regenerates the outputs and compares them with the expected files.</td></tr>
+  <tr><td><code>make MODE=api</code></td><td>Reads <code>input/</code> through the Claude API instead of the saved replies in <code>data/</code>.</td></tr>
+  <tr><td><code>make clean</code></td><td>Removes <code>build/</code> and <code>output/</code>.</td></tr>
+</table>
+<p>Variables such as <code>CC</code>, <code>CFLAGS</code> and <code>PYTHON</code> are set with
+<code>?=</code>, so they can be overridden on the command line. For example,
+<code>make CFLAGS="... -Werror"</code> makes warnings fatal, which is how the code was checked
+to compile without any warnings. One program run writes three output files. To keep this
+compatible with older versions of GNU make, the text report is the real target and the CSV
+and Prolog files depend on it, rather than using the newer &ldquo;grouped targets&rdquo;
+syntax.</p>
+
+<!-- ===================================================================== -->
+<h2>9. Prolog knowledge base</h2>
+<p>Prolog stores knowledge as <strong>facts</strong> and <strong>rules</strong>, and answers
+questions by searching for values that make a query true. In this project the facts are
+generated, never typed in by hand:</p>
+<table>
+  <tr><th style="width:27%">File</th><th style="width:22%">Written by</th><th>Facts</th></tr>
+  <tr><td><code>build/schedule.pl</code></td><td><code>syllabus_reader.py</code></td><td><code>course(Code, Title, Section, Lecturer, Room)</code>, <code>meets(Code, Section, Day, Start, End)</code></td></tr>
+  <tr><td><code>build/faculty.pl</code></td><td><code>syllabus_reader.py</code></td><td><code>professor(Name, Dept, Email, Office)</code>, <code>teaches(Name, Code)</code>, <code>office_hour(...)</code></td></tr>
+  <tr><td><code>output/office_hours.pl</code></td><td>the C program (<code>-p</code>)</td><td><code>assigned(Prof, Code, Section)</code>, <code>scheduled_office_hour(Prof, Day, Start, End, Code)</code></td></tr>
+</table>
+<p>Taking the office hours from the C program's output, rather than from the faculty file,
+means Prolog reasons about the <em>final</em> schedule, including generated hours. Prolog's
+answers and the printed report can never disagree. The hand-written rules in
+<code>prolog/rules.pl</code> build on these facts. Some examples:</p>
+<pre>% Who teaches this class?
+who_teaches(Code, Prof) :- assigned(Prof, Code, _).
+
+% Which office hours are on a given day?
+office_hours_on(Day, Prof, Start, End, Code) :-
+    scheduled_office_hour(Prof, Day, Start, End, Code).
+
+% Can a student see this professor at this time?  (in office hours and not teaching)
+available(Prof, Day, Time) :-
+    in_office(Prof, Day, Time, _),
+    \+ in_class(Prof, Day, Time).
+
+% Does any office hour overlap one of the professor's classes?
+clash(Prof, Day, Code, OStart, OEnd) :-
+    scheduled_office_hour(Prof, Day, OStart, OEnd, _),
+    class_time(Prof, Code, Day, CStart, CEnd),
+    overlaps(OStart, OEnd, CStart, CEnd).</pre>
+<p>Other rules answer where a course meets, which days a professor is off campus, how many
+office hours they hold per week, and which courses are online or meet in the evening. Times
+are stored as zero-padded <code>'HH:MM'</code> atoms, so Prolog's standard ordering
+(<code>@&lt;</code>) compares them correctly without any conversion.</p>
+
+<p><strong>Python &harr; Prolog.</strong> <code>ask.py</code> uses pyswip to start SWI-Prolog,
+consults <code>prolog/knowledge_base.pl</code> (which loads all the facts and rules), runs
+queries, and prints the answers. Python only builds the query and formats the result; the
+reasoning is done by the rules. Anything a user types is passed into the query as a quoted
+Prolog atom, so input like <code>x'), halt, ('</code> is treated as an unknown course name,
+not as code. The knowledge base can also be used directly in <code>swipl</code>.</p>
+<pre>$ python3 ask.py available mensah tuesday 10:00
+Can I see Dr. Kwame Mensah on Tuesday at 10:00 AM?
+  No - they are teaching then (instructors are not to be interrupted).
+
+$ python3 ask.py office-hours wednesday
+Which office hours are on Wednesday?
+  Dr. Kwame Mensah: 10:45 AM - 1:00 PM (COSC 330)
+  Dr. Linda Okafor: 1:00 PM - 3:00 PM (COSC 241)
+  Dr. Kwame Mensah: 3:00 PM - 5:00 PM (COSC 631)</pre>
+
+<!-- ===================================================================== -->
+<h2>10. Output</h2>
+<p>The sample data contains two professors chosen to exercise both paths through the
+program. Dr. Mensah has the courses from the assignment's sample and no office hours in the
+faculty file, so his are generated. Dr. Okafor supplies her own office hours and also teaches
+an online course with no meeting time. The text report follows the layout of the sample
+tables:</p>
+<pre>CLASS SCHEDULE
+Course                              Times                                    Location
+---------------------------------------------------------------------------------------
+COSC 631 (Database management)      Wednesday 5:00 PM to 7:30 PM             CS 313
+COSC 369 (Software Engineering I)   Tuesday &amp; Thursday 9:30 AM to 10:45 AM   CS 108
+COSC 330 (Systems Programming I)    Monday &amp; Wednesday 9:30 AM to 10:45 AM   CS 311
+
+OFFICE HOURS (generated)
+    Monday:    10:45 AM - 1:00 PM (COSC 330)
+    Tuesday:   10:45 AM - 1:00 PM (COSC 369)
+    Wednesday: 10:45 AM - 1:00 PM (COSC 330)
+               &amp; 3:00 - 5:00 PM (COSC 631)
+    Thursday:  10:45 AM - 1:00 PM (COSC 369)
+    Friday:
+
+NOTE: Instructors are not to be interrupted during class times.</pre>
+<p>The same results are written to a CSV file, in which every value is already formatted
+for display. <code>make_docx.py</code> lays that file out as a Word document with one page
+per professor (Figure 2). Keeping the layout in Python and the logic in C means the
+document's appearance can change without touching the scheduler.</p>
+<figure>
+  <img class="shot" src="img/docx_page.png" alt="First page of the generated Word document">
+  <figcaption>Figure 2. First page of the generated <code>output/office_hours.docx</code>.</figcaption>
+</figure>
+
+<!-- ===================================================================== -->
+<h2>11. Testing</h2>
+<ul>
+  <li><strong>Regression test.</strong> <code>make test</code> regenerates the report and the
+  Prolog answers and compares them, using <code>diff</code>, with
+  <code>tests/expected_report.txt</code> and <code>tests/expected_answers.txt</code>. Any
+  change in behaviour shows up as a readable difference.</li>
+  <li><strong>Edge cases.</strong> These were tested with a separate set of inputs:
+    <ul>
+      <li>back-to-back classes (a gap too short after the first, so its block moves before it);</li>
+      <li>a class starting after 5:00 PM;</li>
+      <li>lecturer-supplied hours that overlap a class (reported as a warning);</li>
+      <li>a course whose lecturer is not in the faculty file (reported);</li>
+      <li>a course matched only through the faculty file's course list;</li>
+      <li>an online course with no meeting time.</li>
+    </ul>
+  </li>
+  <li><strong>Invalid input.</strong> Unknown days, impossible times (<code>25:00</code>), a
+  class that ends before it starts, unknown record types, a missing file, the wrong number of
+  input files, and bad option values each produce a clear message and a non-zero exit
+  status.</li>
+  <li><strong>Memory safety.</strong> All of the above were run with the code compiled using
+  AddressSanitizer and UndefinedBehaviorSanitizer (<code>-fsanitize=address,undefined</code>),
+  with no errors reported. The code also compiles cleanly with
+  <code>-std=c99 -Wall -Wextra -pedantic -Werror</code>.</li>
+  <li><strong>Python side.</strong> The reader was tested on the assignment's own
+  <code>.docx</code> file, including its tables, and with malformed replies that must be
+  rejected. The Prolog questions were tested with loosely typed names, unknown names, and
+  quote-injection attempts.</li>
+</ul>
+
+<!-- ===================================================================== -->
+<h2>12. Compiling and running</h2>
+<pre>sudo apt install build-essential python3-pip swi-prolog-nox
+pip install -r requirements.txt     # pydantic, python-docx, pyswip (+ anthropic for API mode)
+
+make            # build the library and program, generate output/ and the Word document
+make test       # verify against the expected output
+make ask        # sample questions answered by Prolog
+build/officehours --help</pre>
+<p>To use a new syllabus in chat mode:</p>
+<pre>mkdir -p build
+python3 syllabus_reader.py syllabus --prompt > build/prompt.txt
+#   paste prompt.txt into claude.ai with the syllabus attached;
+#   save the reply as data/syllabus_reply.json (same for the faculty file)
+make</pre>
+
+<!-- ===================================================================== -->
+<h2>13. Limitations and future work</h2>
+<ul>
+  <li><strong>Name matching is heuristic.</strong> Two professors who share a surname would
+  both match a syllabus entry that gives only the surname. Including first names or emails in
+  the syllabus, or a stricter matching mode, would remove the ambiguity.</li>
+  <li><strong>The office-hour policy is simple.</strong> It does not aim for a weekly total
+  (some departments require a fixed number of hours), avoid lunch breaks, or spread hours over
+  days without classes. Because the policy is a separate structure, a different strategy could
+  be added without changing the loader or the reports.</li>
+  <li><strong>Extraction quality depends on the source.</strong> A badly scanned PDF can be
+  misread. Validation catches malformed data, but not a plausible wrong value such as a misread
+  room number. A human should glance at the extracted data in <code>data/</code> once per
+  syllabus.</li>
+  <li><strong>Possible extensions:</strong> an Excel export alongside the Word document;
+  detecting room double-bookings across professors; a web front end linked against the same
+  static library.</li>
+</ul>
+
+</body>
+</html>

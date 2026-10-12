@@ -127,10 +127,14 @@ static int free_since(const Busy *b, int t, int limit)
     return since;
 }
 
-static int add_block(Professor *p, int day, int start, int end, const char *course)
+static int add_block(Professor *p, int day, int start, int end, const char *course,
+                     FILE *warnings)
 {
-    if (p->n_office_hours == MAX_OFFICE_HOURS)
+    if (p->n_office_hours == MAX_OFFICE_HOURS) {
+        fprintf(warnings, "warning: more than %d office-hour blocks for %s; %s on %s skipped\n",
+                MAX_OFFICE_HOURS, p->name, course, day_name(day));
         return -1;
+    }
     OfficeHour *oh = &p->office_hours[p->n_office_hours++];
     oh->day = day;
     oh->start = start;
@@ -151,7 +155,7 @@ static int place_block(Professor *p, const Schedule *s, const Policy *pol,
         if (until >= 0) {
             int end = c->end + pol->after_class < until ? c->end + pol->after_class : until;
             if (end - c->end >= pol->min_block)
-                return add_block(p, day, c->end, end, c->code);
+                return add_block(p, day, c->end, end, c->code, warnings);
         }
     }
 
@@ -161,7 +165,7 @@ static int place_block(Professor *p, const Schedule *s, const Policy *pol,
         if (since >= 0) {
             int start = class_start - pol->before_class > since ? class_start - pol->before_class : since;
             if (class_start - start >= pol->min_block)
-                return add_block(p, day, start, class_start, c->code);
+                return add_block(p, day, start, class_start, c->code, warnings);
         }
     }
 

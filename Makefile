@@ -5,6 +5,7 @@
 #   make run        print the generated report on the screen
 #   make ask        answer the sample questions with Prolog (needs SWI-Prolog + pyswip)
 #   make test       compare the report and the Prolog answers with tests/
+#   make report     rebuild report/report.pdf from report/report.html (needs playwright)
 #   make clean      remove everything that make created
 #
 # Where the two input files come from (see README.md):
@@ -61,7 +62,7 @@ REPORT_DOCX = $(OUT_DIR)/office_hours.docx
 REPORT_PL   = $(OUT_DIR)/office_hours.pl
 ANSWERS     = $(OUT_DIR)/prolog_answers.txt
 
-.PHONY: all lib run ask test clean
+.PHONY: all lib run ask test report clean
 
 all: $(REPORT_TXT) $(REPORT_DOCX) $(SCHEDULE_PL) $(FACULTY_PL)
 
@@ -127,6 +128,13 @@ $(ANSWERS): $(KNOWLEDGE) ask.py
 
 ask: $(KNOWLEDGE)
 	$(PYTHON) ask.py
+
+# ---- Project report -------------------------------------------------------------
+
+report: report/report.pdf
+
+report/report.pdf: report/report.html report/img/docx_page.png report/build_pdf.py
+	$(PYTHON) report/build_pdf.py
 
 # ---- Tests ----------------------------------------------------------------------
 
