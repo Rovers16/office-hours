@@ -1,0 +1,16 @@
+{
+  "courses": [
+    {"code": "COSC 631", "title": "Database management", "section": null, "lecturer": "Dr. Mensah",
+     "days": ["Wednesday"], "start_time": "17:00", "end_time": "19:30", "room": "CS 313", "notes": null},
+    {"code": "COSC 369", "title": "Software Engineering I", "section": null, "lecturer": "Dr. Mensah",
+     "days": ["Tuesday", "Thursday"], "start_time": "09:30", "end_time": "10:45", "room": "CS 108", "notes": null},
+    {"code": "COSC 330", "title": "Systems Programming I", "section": null, "lecturer": "Dr. Mensah",
+     "days": ["Monday", "Wednesday"], "start_time": "09:30", "end_time": "10:45", "room": "CS 311", "notes": null},
+    {"code": "COSC 241", "title": "Data Structures", "section": null, "lecturer": "Dr. Okafor",
+     "days": ["Monday", "Wednesday", "Friday"], "start_time": "11:00", "end_time": "11:50", "room": "CS 210", "notes": null},
+    {"code": "COSC 450", "title": "Operating Systems", "section": null, "lecturer": "Dr. Okafor",
+     "days": ["Tuesday", "Thursday"], "start_time": "14:00", "end_time": "15:15", "room": "CS 108", "notes": null},
+    {"code": "COSC 110", "title": "Introduction to Computing", "section": null, "lecturer": "Dr. Okafor",
+     "days": [], "start_time": null, "end_time": null, "room": "Online", "notes": "Fully online (asynchronous)"}
+  ]
+}

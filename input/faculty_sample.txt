@@ -1,0 +1,14 @@
+Computer Science Faculty, Fall 2026
+
+Dr. Kwame Mensah - Professor, Department of Computer Science
+  Office: CS 305    Email: kmensah@university.edu
+  Teaching: COSC 330, COSC 369, COSC 631
+  Office hours: to be scheduled by the department.
+
+Dr. Linda Okafor - Associate Professor, Department of Computer Science
+  Office: CS 214    Email: lokafor@university.edu
+  Teaching: COSC 110, COSC 241, COSC 450
+  Office hours (set by Dr. Okafor):
+    Monday     1:00 - 3:00 PM  (COSC 241)
+    Wednesday  1:00 - 3:00 PM  (COSC 241)
+    Thursday   10:00 AM - 12:00 PM  (COSC 450)

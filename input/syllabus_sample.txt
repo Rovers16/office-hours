@@ -1,6 +1,10 @@
-CLASS SCHEDULE - Fall 2026, Computer Science
+DEPARTMENT OF COMPUTER SCIENCE - CLASS SCHEDULE, FALL 2026
 
-Course                              Times                                   Location
-COSC 631 (Database management)      Wednesday 5:00 PM to 7:30 PM            CS 313
-COSC 369 (Software Engineering I)   Tuesday & Thursday 9:30 AM to 10:45 AM  CS 108
-COSC 330 (Systems Programming I)    Monday & Wednesday 9:30 AM to 10:45 AM  CS 311
+Course                              Times                                   Location   Lecturer
+COSC 631 (Database management)      Wednesday 5:00 PM to 7:30 PM            CS 313     Dr. Mensah
+COSC 369 (Software Engineering I)   Tuesday & Thursday 9:30 AM to 10:45 AM  CS 108     Dr. Mensah
+COSC 330 (Systems Programming I)    Monday & Wednesday 9:30 AM to 10:45 AM  CS 311     Dr. Mensah
+
+COSC 241 Data Structures - MWF 11:00-11:50am, room CS 210. Instructor: Dr. Okafor
+COSC 450 Operating Systems meets TTh 2:00-3:15 PM in CS 108 (Dr. Okafor)
+COSC 110 Introduction to Computing is fully online (asynchronous), taught by Dr. Okafor.
