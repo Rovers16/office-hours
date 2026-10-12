@@ -5,7 +5,8 @@
  *
  * Reads exactly two input files (the class schedule and the faculty file),
  * works out which professor teaches what, generates office hours where the
- * lecturer did not provide them, and writes a text report and a CSV file.
+ * lecturer did not provide them, and writes a text report (plus, on request,
+ * a CSV file and Prolog facts).
  * All of the work is done by the static library libofficehours.a.
  */
 #include <stdio.h>
@@ -26,6 +27,7 @@ static void usage(FILE *out, const char *prog)
         "Options:\n"
         "  -o FILE         write the text report to FILE (default: standard output)\n"
         "  -c FILE         also write a CSV version of the report to FILE\n"
+        "  -p FILE         also write the results as Prolog facts to FILE\n"
         "  --after MIN     length of an office-hour block after a class (default 135)\n"
         "  --before MIN    length of a block before a class when there is no room after (default 120)\n"
         "  --min MIN       shortest block worth scheduling (default 30)\n"
@@ -64,7 +66,7 @@ static FILE *open_output(const char *path)
 
 int main(int argc, char **argv)
 {
-    const char *report_path = NULL, *csv_path = NULL;
+    const char *report_path = NULL, *csv_path = NULL, *prolog_path = NULL;
     const char *inputs[2];
     int n_inputs = 0;
     Policy policy = default_policy();
@@ -84,6 +86,8 @@ int main(int argc, char **argv)
             report_path = argv[++i];
         } else if (strcmp(arg, "-c") == 0) {
             csv_path = argv[++i];
+        } else if (strcmp(arg, "-p") == 0) {
+            prolog_path = argv[++i];
         } else if (strcmp(arg, "--after") == 0) {
             bad = minutes_arg(argv[++i], &policy.after_class);
         } else if (strcmp(arg, "--before") == 0) {
@@ -150,6 +154,13 @@ int main(int argc, char **argv)
             goto done;
         write_csv_report(csv, &faculty, &schedule);
         fclose(csv);
+    }
+    if (prolog_path) {
+        FILE *pl = open_output(prolog_path);
+        if (pl == NULL)
+            goto done;
+        write_prolog_facts(pl, &faculty, &schedule);
+        fclose(pl);
     }
     status = 0;
 

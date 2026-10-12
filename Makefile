@@ -3,7 +3,8 @@
 #   make            build everything and generate the output (default)
 #   make lib        build only the static library build/libofficehours.a
 #   make run        print the generated report on the screen
-#   make test       compare the generated report with tests/expected_report.txt
+#   make ask        answer the sample questions with Prolog (needs SWI-Prolog + pyswip)
+#   make test       compare the report and the Prolog answers with tests/
 #   make clean      remove everything that make created
 #
 # Where the two input files come from (see README.md):
@@ -35,19 +36,34 @@ PROGRAM     = $(BUILD_DIR)/officehours
 SCHEDULE_PSV = $(BUILD_DIR)/schedule.psv
 FACULTY_PSV  = $(BUILD_DIR)/faculty.psv
 
-# Original, human-written input files and the saved claude.ai chat replies.
+# The same data as Prolog facts, for prolog/knowledge_base.pl.
+SCHEDULE_PL = $(BUILD_DIR)/schedule.pl
+FACULTY_PL  = $(BUILD_DIR)/faculty.pl
+
+# Original, human-written input files.
 SYLLABUS_INPUT = input/syllabus_sample.txt
 FACULTY_INPUT  = input/faculty_sample.txt
-SYLLABUS_REPLY = data/syllabus_reply.json
-FACULTY_REPLY  = data/faculty_reply.json
+
+# Structured data extracted from them by Claude.
+ifeq ($(MODE),chat)
+SYLLABUS_JSON = data/syllabus_reply.json
+FACULTY_JSON  = data/faculty_reply.json
+else ifeq ($(MODE),api)
+SYLLABUS_JSON = $(BUILD_DIR)/syllabus_api.json
+FACULTY_JSON  = $(BUILD_DIR)/faculty_api.json
+else
+$(error MODE must be 'chat' or 'api', not '$(MODE)')
+endif
 
 REPORT_TXT  = $(OUT_DIR)/office_hours.txt
 REPORT_CSV  = $(OUT_DIR)/office_hours.csv
 REPORT_DOCX = $(OUT_DIR)/office_hours.docx
+REPORT_PL   = $(OUT_DIR)/office_hours.pl
+ANSWERS     = $(OUT_DIR)/prolog_answers.txt
 
-.PHONY: all lib run test clean
+.PHONY: all lib run ask test clean
 
-all: $(REPORT_TXT) $(REPORT_DOCX)
+all: $(REPORT_TXT) $(REPORT_DOCX) $(SCHEDULE_PL) $(FACULTY_PL)
 
 lib: $(LIB)
 
@@ -75,26 +91,25 @@ $(PROGRAM): $(MAIN_OBJ) $(LIB)
 
 # ---- Python: turn the syllabus and faculty files into the C program's input --
 
-ifeq ($(MODE),api)
-$(SCHEDULE_PSV): $(SYLLABUS_INPUT) syllabus_reader.py | $(BUILD_DIR)
+# API mode only: one Claude request per input file. In chat mode the JSON
+# files in data/ are the replies saved from the claude.ai chat.
+$(BUILD_DIR)/syllabus_api.json: $(SYLLABUS_INPUT) syllabus_reader.py | $(BUILD_DIR)
 	$(PYTHON) syllabus_reader.py syllabus $< -o $@
-$(FACULTY_PSV): $(FACULTY_INPUT) syllabus_reader.py | $(BUILD_DIR)
+$(BUILD_DIR)/faculty_api.json: $(FACULTY_INPUT) syllabus_reader.py | $(BUILD_DIR)
 	$(PYTHON) syllabus_reader.py faculty $< -o $@
-else ifeq ($(MODE),chat)
-$(SCHEDULE_PSV): $(SYLLABUS_REPLY) syllabus_reader.py | $(BUILD_DIR)
+
+# Convert the extracted data (no Claude request) into the formats we need.
+$(BUILD_DIR)/schedule.%: $(SYLLABUS_JSON) syllabus_reader.py | $(BUILD_DIR)
 	$(PYTHON) syllabus_reader.py syllabus --from-json $< -o $@
-$(FACULTY_PSV): $(FACULTY_REPLY) syllabus_reader.py | $(BUILD_DIR)
+$(BUILD_DIR)/faculty.%: $(FACULTY_JSON) syllabus_reader.py | $(BUILD_DIR)
 	$(PYTHON) syllabus_reader.py faculty --from-json $< -o $@
-else
-$(error MODE must be 'chat' or 'api', not '$(MODE)')
-endif
 
 # ---- Output -----------------------------------------------------------------
 
-# One run of the program writes both the text report and the CSV.
+# One run of the program writes the text report, the CSV and the Prolog facts.
 $(REPORT_TXT): $(PROGRAM) $(SCHEDULE_PSV) $(FACULTY_PSV) | $(OUT_DIR)
-	$(PROGRAM) -o $(REPORT_TXT) -c $(REPORT_CSV) $(SCHEDULE_PSV) $(FACULTY_PSV)
-$(REPORT_CSV): $(REPORT_TXT)
+	$(PROGRAM) -o $(REPORT_TXT) -c $(REPORT_CSV) -p $(REPORT_PL) $(SCHEDULE_PSV) $(FACULTY_PSV)
+$(REPORT_CSV) $(REPORT_PL): $(REPORT_TXT)
 	@:
 
 $(REPORT_DOCX): $(REPORT_CSV) make_docx.py
@@ -103,8 +118,22 @@ $(REPORT_DOCX): $(REPORT_CSV) make_docx.py
 run: $(PROGRAM) $(SCHEDULE_PSV) $(FACULTY_PSV)
 	$(PROGRAM) $(SCHEDULE_PSV) $(FACULTY_PSV)
 
-test: $(REPORT_TXT)
-	diff -u tests/expected_report.txt $(REPORT_TXT) && echo "test passed"
+# ---- Prolog -------------------------------------------------------------------
+
+KNOWLEDGE = $(SCHEDULE_PL) $(FACULTY_PL) $(REPORT_PL) prolog/knowledge_base.pl prolog/rules.pl
+
+$(ANSWERS): $(KNOWLEDGE) ask.py
+	$(PYTHON) ask.py > $@
+
+ask: $(KNOWLEDGE)
+	$(PYTHON) ask.py
+
+# ---- Tests ----------------------------------------------------------------------
+
+test: $(REPORT_TXT) $(ANSWERS)
+	diff -u tests/expected_report.txt $(REPORT_TXT)
+	diff -u tests/expected_answers.txt $(ANSWERS)
+	@echo "all tests passed"
 
 $(BUILD_DIR) $(OUT_DIR):
 	mkdir -p $@

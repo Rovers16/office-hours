@@ -7,10 +7,12 @@ and a faculty file.
 ## Quick start
 
 ```bash
+sudo apt install swi-prolog-nox   # only needed for the Prolog part (make ask / make test)
 pip install -r requirements.txt   # anthropic is only used by make MODE=api
 make                              # build, generate output/, write the Word file
-make test                         # check the report against tests/expected_report.txt
+make test                         # check the report and the Prolog answers against tests/
 make run                          # print the report on the screen
+make ask                          # answer the sample questions with Prolog
 make clean                        # remove build/ and output/
 ```
 
@@ -23,6 +25,9 @@ make clean                        # remove build/ and output/
 | `output/office_hours.txt` | the report, in the style of the sample tables |
 | `output/office_hours.csv` | the same data for the Word generator |
 | `output/office_hours.docx` | the final Word document |
+| `output/office_hours.pl` | the program's results as Prolog facts |
+| `build/schedule.pl`, `build/faculty.pl` | the input data as Prolog facts |
+| `output/prolog_answers.txt` | answers to the sample questions (`make test`) |
 
 ## How the system fits together
 
@@ -44,6 +49,10 @@ input/faculty_sample.txt  ─┴─> Claude ─> data/*.json ─┴─> build/fa
    else.
 3. **Document (Python).** `make_docx.py` only lays out the C program's CSV as a
    Word document. All the scheduling decisions are made in C.
+4. **Questions (Prolog).** The input data and the C program's results are
+   also written as Prolog facts. Prolog combines them with the rules in
+   `prolog/rules.pl` to answer questions such as "who teaches COSC 369?".
+   See [Asking questions with Prolog](#asking-questions-with-prolog).
 
 ### Source layout
 
@@ -96,6 +105,66 @@ OFFICE_HOUR|name|day|start|end|course
 
 Times are 24-hour `HH:MM`. Empty fields are allowed. Lines starting with `#`
 are comments. Bad lines are reported with the file name and line number.
+
+## Asking questions with Prolog
+
+Python generates the **facts**, Prolog stores them together with hand-written
+**rules**, and acts as the interpreter that answers questions.
+
+| File | Written by | Contains |
+|------|------------|----------|
+| `build/schedule.pl` | `syllabus_reader.py` | `course(Code, Title, Section, Lecturer, Room)`, `meets(Code, Section, Day, Start, End)` |
+| `build/faculty.pl` | `syllabus_reader.py` | `professor(Name, Department, Email, Office)`, `teaches(Name, Code)`, `office_hour(...)` supplied by lecturers |
+| `output/office_hours.pl` | the C program (`-p`) | `assigned(Professor, Code, Section)`, `scheduled_office_hour(Professor, Day, Start, End, Code)`, `office_hours_source(Professor, generated/provided)` |
+| `prolog/rules.pl` | by hand | the rules below |
+| `prolog/knowledge_base.pl` | by hand | loads all of the above |
+
+The office hours Prolog reasons about are the C program's final ones,
+including the generated ones, so Prolog and the report always agree.
+
+Some of the rules:
+
+| Rule | Answers |
+|------|---------|
+| `who_teaches(Code, Prof)` | Who teaches this class? |
+| `office_hours_on(Day, Prof, Start, End, Code)` | Which office hours are on Wednesday? |
+| `available(Prof, Day, Time)` | Can I see this professor at this time? (in office hours and not in class) |
+| `class_time/5`, `where_is/2`, `meets_on/5` | When and where does a class meet? |
+| `office_hours_for(Code, Prof, Day, Start, End)` | When can I get help with this course? |
+| `free_day(Prof, Day)`, `on_campus(Prof, Day)` | Which days is a professor not on campus? |
+| `clash(Prof, Day, Code, Start, End)` | Does any office hour overlap a class? |
+| `weekly_office_minutes(Prof, Minutes)` | How many office hours does a professor hold per week? |
+| `online_course/1`, `evening_class/3`, `colleagues/2` | ... |
+
+### Using it from Python (pyswip)
+
+```bash
+python3 ask.py                                   # the sample questions
+python3 ask.py who-teaches "COSC 369"
+python3 ask.py office-hours wednesday
+python3 ask.py schedule mensah                   # a professor's whole week
+python3 ask.py available mensah wednesday 11:30
+python3 ask.py help-for "COSC 631"
+python3 ask.py query "evening_class(Code, Day, Start)"
+python3 ask.py -i                                # type Prolog queries yourself
+```
+
+Names and codes can be typed loosely: `mensah` finds Dr. Kwame Mensah, and
+`cosc369` finds COSC 369. `ask.py` only builds the query and formats the
+answer; all of the reasoning is done by the Prolog rules. User text is
+always passed to Prolog as a quoted atom, so it cannot change the query.
+
+### Using it directly in SWI-Prolog
+
+```
+$ swipl prolog/knowledge_base.pl
+?- who_teaches('COSC 369', P).
+P = 'Dr. Kwame Mensah'.
+
+?- office_hours_on(wednesday, P, Start, End, Course).
+P = 'Dr. Kwame Mensah', Start = '10:45', End = '13:00', Course = 'COSC 330' ;
+...
+```
 
 ## Where the input files come from
 

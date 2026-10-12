@@ -239,6 +239,7 @@ def to_prolog(data) -> str:
         lines += [
             "% course(Code, Title, Section, Lecturer, Room).",
             "% meets(Code, Section, Day, Start, End).",
+            ":- discontiguous course/5, meets/5.",
         ]
         for c in data.courses:
             lines.append(
@@ -255,6 +256,7 @@ def to_prolog(data) -> str:
             "% professor(Name, Department, Email, Office).",
             "% teaches(Name, CourseCode).",
             "% office_hour(Name, Day, Start, End, CourseCode).",
+            ":- discontiguous professor/4, teaches/2, office_hour/5.",
         ]
         for p in data.professors:
             lines.append(

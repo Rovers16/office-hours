@@ -19,4 +19,14 @@ void write_text_report(FILE *out, const Faculty *faculty, const Schedule *schedu
  */
 void write_csv_report(FILE *out, const Faculty *faculty, const Schedule *schedule);
 
+/*
+ * The program's results as Prolog facts, for prolog/knowledge_base.pl.
+ * Atoms use the same conventions as syllabus_reader.py (quoted names and
+ * codes, lower-case days, 'HH:MM' times, none for an empty value):
+ *   assigned(Professor, CourseCode, Section).
+ *   scheduled_office_hour(Professor, Day, Start, End, CourseCode).
+ *   office_hours_source(Professor, generated | provided).
+ */
+void write_prolog_facts(FILE *out, const Faculty *faculty, const Schedule *schedule);
+
 #endif /* REPORT_H */
