@@ -6,11 +6,15 @@ sent to the Claude API, which returns the data in one fixed JSON structure.
 That structure is then written out as JSON, Prolog facts, or a pipe-separated
 text file that the C program can read with fgets()/strtok().
 
-Two ways to run it:
+Three ways to run it:
 
   API mode (automatic, needs ANTHROPIC_API_KEY, billed per request):
     python3 syllabus_reader.py syllabus input/syllabus.pdf -o build/schedule.psv
     python3 syllabus_reader.py faculty  input/faculty.docx -o build/faculty.pl
+
+  Ollama mode (automatic, free, runs a local model; needs Ollama running):
+    python3 syllabus_reader.py --backend ollama syllabus input/syllabus.pdf -o build/schedule.psv
+    python3 syllabus_reader.py --backend ollama --model qwen2.5 faculty input/faculty.docx
 
   Chat mode (free, uses the claude.ai chat by hand):
     python3 syllabus_reader.py syllabus --prompt > prompt.txt
@@ -33,6 +37,8 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel
 
 DEFAULT_MODEL = "claude-opus-5-5"
+DEFAULT_OLLAMA_MODEL = "llama3.1"
+OLLAMA_CONTEXT = 16384  # tokens; Ollama's default window is too small for a long syllabus
 
 Day = Literal["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -123,20 +129,33 @@ def docx_to_text(path: Path) -> str:
     return "\n".join(lines)
 
 
-def file_to_content(path: Path) -> list:
-    """Build the content blocks for the request: the file, then the instructions."""
+def pdf_to_text(path: Path) -> str:
+    """Pull the text out of a PDF, page by page (for models that can't read PDFs)."""
+    from pypdf import PdfReader
+    return "\n".join(page.extract_text() or "" for page in PdfReader(str(path)).pages)
+
+
+def file_to_text(path: Path) -> str:
+    """The file's contents as plain text, wrapped in a <file> tag."""
     suffix = path.suffix.lower()
     if suffix == ".pdf":
+        text = pdf_to_text(path)
+    elif suffix == ".docx":
+        text = docx_to_text(path)
+    else:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    return f"<file name=\"{path.name}\">\n{text}\n</file>"
+
+
+def file_to_content(path: Path) -> list:
+    """Build the content blocks for the request: the file, then the instructions."""
+    if path.suffix.lower() == ".pdf":
         data = base64.standard_b64encode(path.read_bytes()).decode("ascii")
         return [{
             "type": "document",
             "source": {"type": "base64", "media_type": "application/pdf", "data": data},
         }]
-    if suffix == ".docx":
-        text = docx_to_text(path)
-    else:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    return [{"type": "text", "text": f"<file name=\"{path.name}\">\n{text}\n</file>"}]
+    return [{"type": "text", "text": file_to_text(path)}]
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +192,32 @@ def extract(path: Path, kind: str, model: str = DEFAULT_MODEL, client=None):
 
     text = "".join(block.text for block in response.content if block.type == "text")
     return schema_model.model_validate_json(text)
+
+
+# ---------------------------------------------------------------------------
+# Ollama mode: the same extraction with a local model
+# ---------------------------------------------------------------------------
+
+def extract_ollama(path: Path, kind: str, model: str = DEFAULT_OLLAMA_MODEL, client=None):
+    """Send the file to a local Ollama model and return a validated Syllabus or Faculty object."""
+    schema_model = KINDS[kind]
+    if client is None:
+        import ollama
+        client = ollama.Client()  # reads OLLAMA_HOST, default http://localhost:11434
+
+    # Local models follow the schema better when it is also in the prompt,
+    # so send the same text as chat mode after the file.
+    prompt = f"{file_to_text(path)}\n\n{chat_prompt(kind)}"
+    response = client.chat(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        format=json_schema(schema_model),  # constrains the reply to this structure
+        options={"temperature": 0, "num_ctx": OLLAMA_CONTEXT},
+    )
+
+    if response.done_reason == "length":
+        raise RuntimeError(f"{path} is too large to extract in one request")
+    return schema_model.model_validate_json(response.message.content)
 
 
 # ---------------------------------------------------------------------------
@@ -331,6 +376,28 @@ def extract_with_api(args):
     return None
 
 
+def extract_with_ollama(args):
+    """Ollama mode. Returns the data, or None after printing an error."""
+    import ollama
+    try:
+        return extract_ollama(args.input, args.kind, model=args.model)
+    except ollama.ResponseError as exc:
+        if exc.status_code == 404:
+            print(f"error: Ollama has no model '{args.model}'; run: ollama pull {args.model}",
+                  file=sys.stderr)
+        else:
+            print(f"error: Ollama returned {exc.status_code}: {exc.error}", file=sys.stderr)
+    except ConnectionError as exc:
+        print(f"error: could not reach Ollama ({exc}); start it with: ollama serve",
+              file=sys.stderr)
+    except ValueError as exc:  # includes pydantic.ValidationError
+        print(f"error: {args.model} returned data that does not fit the {args.kind} "
+              f"structure:\n{exc}", file=sys.stderr)
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+    return None
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__.split("\n\n")[0],
@@ -339,7 +406,9 @@ def main(argv=None) -> int:
     )
     parser.add_argument("kind", choices=KINDS, help="what the input file contains")
     parser.add_argument("input", type=Path, nargs="?",
-                        help="syllabus or faculty file (.pdf, .docx, .txt, ...) - API mode")
+                        help="syllabus or faculty file (.pdf, .docx, .txt, ...) - API or Ollama mode")
+    parser.add_argument("-b", "--backend", choices=["claude", "ollama"], default="claude",
+                        help="who reads the input file: the Claude API (default) or a local Ollama model")
     parser.add_argument("--prompt", action="store_true",
                         help="print the text to paste into the claude.ai chat (free mode)")
     parser.add_argument("--from-json", type=Path, metavar="REPLY",
@@ -347,9 +416,16 @@ def main(argv=None) -> int:
     parser.add_argument("-o", "--output", type=Path, help="output file (default: stdout)")
     parser.add_argument("-f", "--format", choices=WRITERS,
                         help="output format (default: from --output extension, else json)")
-    parser.add_argument("-m", "--model", default=os.environ.get("CLAUDE_MODEL", DEFAULT_MODEL),
-                        help=f"Claude model id for API mode (default: {DEFAULT_MODEL}, or $CLAUDE_MODEL)")
+    parser.add_argument("-m", "--model",
+                        help=f"model to use: a Claude model id (default: {DEFAULT_MODEL}, or "
+                             f"$CLAUDE_MODEL) or, with --backend ollama, an Ollama model "
+                             f"(default: {DEFAULT_OLLAMA_MODEL}, or $OLLAMA_MODEL)")
     args = parser.parse_args(argv)
+    if args.model is None:
+        if args.backend == "ollama":
+            args.model = os.environ.get("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL)
+        else:
+            args.model = os.environ.get("CLAUDE_MODEL", DEFAULT_MODEL)
 
     if sum([args.input is not None, args.prompt, args.from_json is not None]) != 1:
         parser.error("give exactly one of: an input file, --prompt, or --from-json REPLY")
@@ -369,7 +445,7 @@ def main(argv=None) -> int:
     else:
         if not args.input.is_file():
             parser.error(f"input file not found: {args.input}")
-        data = extract_with_api(args)
+        data = extract_with_ollama(args) if args.backend == "ollama" else extract_with_api(args)
         if data is None:
             return 1
 

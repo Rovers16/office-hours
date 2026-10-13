@@ -10,7 +10,7 @@ The project report is [`report/report.pdf`](report/report.pdf).
 
 ```bash
 sudo apt install swi-prolog-nox   # only needed for the Prolog part (make ask / make test)
-pip install -r requirements.txt   # anthropic is only used by make MODE=api
+pip install -r requirements.txt   # anthropic / ollama only for make MODE=api / MODE=ollama
 make                              # build, generate output/, write the Word file
 make test                         # check the report and the Prolog answers against tests/
 make run                          # print the report on the screen
@@ -181,7 +181,7 @@ format or go offline the day of the demo.
 The only step that uses the Internet is turning a new syllabus into
 structured data with Claude. Do that once when a syllabus changes, then save
 the result in `data/`. `make MODE=api` instead re-reads `input/` through the
-Claude API on every build.
+Claude API on every build, and `make MODE=ollama` through a local Ollama model.
 
 ## Static libraries and the Makefile
 
@@ -208,7 +208,7 @@ courses (or professors and office hours) in one fixed structure, so the
 program works no matter how the syllabus is laid out: tables, paragraphs,
 abbreviations like `MW`/`TTh`, PDF, Word, or plain text.
 
-There are two ways to run it. Both produce exactly the same output files.
+There are three ways to run it. All produce the same output files.
 
 ### Option A: free chat mode (claude.ai, no API key)
 
@@ -266,11 +266,46 @@ automatically and nothing needs the chat again until a syllabus changes.
    python3 syllabus_reader.py syllabus input/syllabus.pdf
    ```
 
+### Option C: Ollama mode (automatic, free, runs on your computer)
+
+The same extraction as API mode, but with an open model running locally in
+[Ollama](https://ollama.com). No API key or Internet connection is needed once
+the model is downloaded.
+
+1. Install Ollama, start it, and download a model (about 5 GB; 8 GB of RAM or more recommended):
+
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh   # Linux / WSL
+   ollama serve &                                  # if it is not already running
+   ollama pull llama3.1
+   pip install -r requirements.txt
+   ```
+
+2. Run it on the input files with `--backend ollama`:
+
+   ```bash
+   python3 syllabus_reader.py --backend ollama syllabus input/syllabus_sample.txt -o build/schedule.psv
+   python3 syllabus_reader.py --backend ollama --model qwen2.5 faculty input/faculty_sample.txt
+   ```
+
+   or build everything with `make MODE=ollama` (`make MODE=ollama OLLAMA_MODEL=qwen2.5`
+   for another model).
+
+The reply is forced into the same JSON structure and checked the same way. PDFs
+are converted to text first (with `pypdf`), because Ollama models can't read
+PDF files. Small local models make more mistakes than Claude on messy
+syllabi, for example `TTh` or AM/PM times, so check the generated
+`build/schedule.psv` before trusting it. If Ollama runs on another machine, or
+on Windows while this runs in WSL, set `OLLAMA_HOST` (e.g.
+`export OLLAMA_HOST=http://192.168.1.10:11434`).
+
 ### Output formats
 
 The output format follows the `-o` extension (`.psv`, `.pl`, `.json`) or can be
 set with `--format`. In API mode, use `--model` (or `$CLAUDE_MODEL`) to pick a different
-Claude model; e.g. `--model claude-haiku-5-5` is the cheapest option.
+Claude model; e.g. `--model claude-haiku-5-5` is the cheapest option. In Ollama
+mode, `--model` (or `$OLLAMA_MODEL`) is any model you have pulled; the default is
+`llama3.1`.
 
 | Format | Contents |
 |--------|----------|

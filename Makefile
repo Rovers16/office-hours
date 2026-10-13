@@ -12,6 +12,8 @@
 #   make                 MODE=chat (default): use the JSON replies saved from the
 #                        free claude.ai chat in data/ - no API key, no Internet
 #   make MODE=api        send input/ files to the Claude API (needs ANTHROPIC_API_KEY)
+#   make MODE=ollama     send input/ files to a local Ollama model (needs Ollama running;
+#                        pick the model with OLLAMA_MODEL=..., default llama3.1)
 
 CC      ?= gcc
 CFLAGS  ?= -std=c99 -Wall -Wextra -pedantic -O2
@@ -21,6 +23,7 @@ ARFLAGS  = rcs
 PYTHON  ?= python3
 
 MODE ?= chat
+OLLAMA_MODEL ?= llama3.1
 
 SRC_DIR   = src
 BUILD_DIR = build
@@ -52,8 +55,11 @@ FACULTY_JSON  = data/faculty_reply.json
 else ifeq ($(MODE),api)
 SYLLABUS_JSON = $(BUILD_DIR)/syllabus_api.json
 FACULTY_JSON  = $(BUILD_DIR)/faculty_api.json
+else ifeq ($(MODE),ollama)
+SYLLABUS_JSON = $(BUILD_DIR)/syllabus_ollama.json
+FACULTY_JSON  = $(BUILD_DIR)/faculty_ollama.json
 else
-$(error MODE must be 'chat' or 'api', not '$(MODE)')
+$(error MODE must be 'chat', 'api' or 'ollama', not '$(MODE)')
 endif
 
 REPORT_TXT  = $(OUT_DIR)/office_hours.txt
@@ -98,6 +104,12 @@ $(BUILD_DIR)/syllabus_api.json: $(SYLLABUS_INPUT) syllabus_reader.py | $(BUILD_D
 	$(PYTHON) syllabus_reader.py syllabus $< -o $@
 $(BUILD_DIR)/faculty_api.json: $(FACULTY_INPUT) syllabus_reader.py | $(BUILD_DIR)
 	$(PYTHON) syllabus_reader.py faculty $< -o $@
+
+# Ollama mode only: the same, with a local model instead of the Claude API.
+$(BUILD_DIR)/syllabus_ollama.json: $(SYLLABUS_INPUT) syllabus_reader.py | $(BUILD_DIR)
+	$(PYTHON) syllabus_reader.py --backend ollama --model $(OLLAMA_MODEL) syllabus $< -o $@
+$(BUILD_DIR)/faculty_ollama.json: $(FACULTY_INPUT) syllabus_reader.py | $(BUILD_DIR)
+	$(PYTHON) syllabus_reader.py --backend ollama --model $(OLLAMA_MODEL) faculty $< -o $@
 
 # Convert the extracted data (no Claude request) into the formats we need.
 $(BUILD_DIR)/schedule.%: $(SYLLABUS_JSON) syllabus_reader.py | $(BUILD_DIR)
