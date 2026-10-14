@@ -263,7 +263,15 @@ def parse_reply(text: str, kind: str):
     start, end = text.find("{"), text.rfind("}")
     if start == -1 or end == -1:
         raise ValueError("no JSON object found in the reply")
-    return KINDS[kind].model_validate_json(text[start:end + 1])
+    text = text[start:end + 1]
+    try:
+        return KINDS[kind].model_validate_json(text)
+    except ValueError:
+        # Copying a reply as formatted text (not with the code block's Copy
+        # button) can turn the JSON's quotes into curly ones, which JSON rejects.
+        if "\u201c" not in text and "\u201d" not in text:
+            raise
+        return KINDS[kind].model_validate_json(text.replace("\u201c", '"').replace("\u201d", '"'))
 
 
 def json_schema(model: type[BaseModel]) -> dict:
