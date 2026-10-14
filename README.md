@@ -272,7 +272,7 @@ The same extraction as API mode, but with an open model running locally in
 [Ollama](https://ollama.com). No API key or Internet connection is needed once
 the model is downloaded.
 
-1. Install Ollama, start it, and download a model (about 5 GB; 8 GB of RAM or more recommended):
+1. Install Ollama, start it, and download a model (about 5 GB; needs at least 8 GB of RAM, 16 GB is comfortable):
 
    ```bash
    curl -fsSL https://ollama.com/install.sh | sh   # Linux / WSL
@@ -295,7 +295,10 @@ The reply is forced into the same JSON structure and checked the same way. PDFs
 are converted to text first (with `pypdf`), because Ollama models can't read
 PDF files. Small local models make more mistakes than Claude on messy
 syllabi, for example `TTh` or AM/PM times, so check the generated
-`build/schedule.psv` before trusting it. If Ollama runs on another machine, or
+`build/schedule.psv` before trusting it. A scanned PDF (page images with no
+text layer) is reported as an error rather than sent to the model as empty
+text; use the Claude API or chat mode for those. The model's context window is
+sized to each file, so a long syllabus is not silently cut short. If Ollama runs on another machine, or
 on Windows while this runs in WSL, set `OLLAMA_HOST` (e.g.
 `export OLLAMA_HOST=http://192.168.1.10:11434`).
 

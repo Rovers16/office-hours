@@ -256,8 +256,9 @@ given on the command line, and the Makefile passes relative paths inside the pro
 </ul>
 <p>The Internet is used in exactly one optional place: turning a <em>new</em> syllabus into
 structured data with Claude (Section&nbsp;4). That happens once per syllabus, and the result
-is saved locally. A department that publishes its schedule online would simply download the
-file into <code>input/</code> and re-run that step.</p>
+is saved locally. With Ollama mode, even that step runs without the Internet once the model
+has been downloaded. A department that publishes its schedule online would simply download
+the file into <code>input/</code> and re-run that step.</p>
 
 <!-- ===================================================================== -->
 <h2>4. Reading syllabi in any format</h2>
@@ -285,7 +286,7 @@ error instead of flowing silently into the C program. The validated data is then
 three formats: <code>.psv</code> for C, <code>.pl</code> facts for Prolog, and
 <code>.json</code>.</p>
 
-<p>There are two ways to run this step, and both produce identical files:</p>
+<p>There are three ways to run this step. All of them produce the same kind of files, so the rest of the system does not know or care which one was used:</p>
 <table>
   <tr><th style="width:22%">Mode</th><th>How it works</th><th style="width:25%">Cost / requirements</th></tr>
   <tr><td><strong>Chat mode</strong> (default)</td>
@@ -298,11 +299,23 @@ three formats: <code>.psv</code> for C, <code>.pl</code> facts for Prolog, and
       <td>The file is sent to the Claude API: PDF files directly, Word files as extracted
       text including tables. Structured outputs force the reply to match the schema.</td>
       <td>An Anthropic API key; billed per request.</td></tr>
+  <tr><td><strong>Ollama mode</strong> (<code>make MODE=ollama</code>)</td>
+      <td>An open model runs on the user's own computer through Ollama. Local models read
+      text, so PDF and Word files are converted to text first (<code>pypdf</code>,
+      <code>python-docx</code>). The reply is constrained to the same JSON schema and
+      validated in the same way. The model can be chosen with <code>--model</code>.</td>
+      <td>Free; no account or Internet after the model download. An 8-billion-parameter
+      model needs at least 8&nbsp;GB of RAM (16&nbsp;GB is comfortable).</td></tr>
 </table>
 <p>Chat mode exists because the free claude.ai plan has no programming interface, and
 automating the website would break its terms of use and break whenever the site changes.
 Splitting the work into &ldquo;Claude reads the file&rdquo; and &ldquo;the program processes
-the result&rdquo; keeps the system free to run while still handling any syllabus layout.</p>
+the result&rdquo; keeps the system free to run while still handling any syllabus layout.
+Ollama mode removes the manual step and the need for an account, at the price of
+accuracy: an 8-billion-parameter local model is more likely than Claude to misread an
+unusual layout, and it cannot read scanned PDFs, which have no text layer. Because every
+reply passes the same validation, a model that gets the structure wrong produces an error
+naming the missing fields, never bad input for the C program.</p>
 
 <!-- ===================================================================== -->
 <h2>5. C program design</h2>
@@ -589,8 +602,12 @@ document's appearance can change without touching the scheduler.</p>
   <code>-std=c99 -Wall -Wextra -pedantic -Werror</code>.</li>
   <li><strong>Python side.</strong> The reader was tested on the assignment's own
   <code>.docx</code> file, including its tables, and with malformed replies that must be
-  rejected. The Prolog questions were tested with loosely typed names, unknown names, and
-  quote-injection attempts.</li>
+  rejected. The Ollama path was tested against a stand-in server implementing Ollama's chat
+  interface. This checked the request (model, schema, context size, text extracted from
+  <code>.txt</code>, <code>.docx</code> and <code>.pdf</code> files) and every failure
+  case: Ollama not running, model not installed, a server error, a reply cut off by the
+  context limit, and a reply that does not match the schema. The Prolog questions were
+  tested with loosely typed names, unknown names, and quote-injection attempts.</li>
 </ul>
 
 <!-- ===================================================================== -->

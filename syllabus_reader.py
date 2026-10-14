@@ -38,7 +38,8 @@ from pydantic import BaseModel
 
 DEFAULT_MODEL = "claude-opus-5-5"
 DEFAULT_OLLAMA_MODEL = "llama3.1"
-OLLAMA_CONTEXT = 16384  # tokens; Ollama's default window is too small for a long syllabus
+OLLAMA_MIN_CONTEXT = 8192    # tokens; Ollama's own default is too small for a syllabus
+OLLAMA_MAX_CONTEXT = 131072
 
 Day = Literal["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -132,7 +133,11 @@ def docx_to_text(path: Path) -> str:
 def pdf_to_text(path: Path) -> str:
     """Pull the text out of a PDF, page by page (for models that can't read PDFs)."""
     from pypdf import PdfReader
-    return "\n".join(page.extract_text() or "" for page in PdfReader(str(path)).pages)
+    pages = [page.extract_text() or "" for page in PdfReader(str(path)).pages]
+    if not "".join(pages).strip():
+        raise RuntimeError(f"{path} has no text layer (a scanned PDF?); local models can't "
+                           "read it - use the Claude API or chat mode, which read page images")
+    return "\n\n".join(f"--- page {i} ---\n{text}" for i, text in enumerate(pages, 1))
 
 
 def file_to_text(path: Path) -> str:
@@ -198,6 +203,20 @@ def extract(path: Path, kind: str, model: str = DEFAULT_MODEL, client=None):
 # Ollama mode: the same extraction with a local model
 # ---------------------------------------------------------------------------
 
+def ollama_context(prompt: str) -> int:
+    """Context window (tokens) big enough for the prompt plus the reply.
+
+    Ollama silently drops the start of a prompt that does not fit, which would
+    lose courses without any error, so size it to the input: about 3 characters
+    per token, plus room for the JSON reply, rounded up to a multiple of 4096.
+    """
+    needed = len(prompt) // 3 + 6000
+    if needed > OLLAMA_MAX_CONTEXT:
+        raise RuntimeError("the file is too long for a local model to read at once; "
+                           "split it, or use the Claude API")
+    return max(OLLAMA_MIN_CONTEXT, -(-needed // 4096) * 4096)
+
+
 def extract_ollama(path: Path, kind: str, model: str = DEFAULT_OLLAMA_MODEL, client=None):
     """Send the file to a local Ollama model and return a validated Syllabus or Faculty object."""
     schema_model = KINDS[kind]
@@ -212,11 +231,11 @@ def extract_ollama(path: Path, kind: str, model: str = DEFAULT_OLLAMA_MODEL, cli
         model=model,
         messages=[{"role": "user", "content": prompt}],
         format=json_schema(schema_model),  # constrains the reply to this structure
-        options={"temperature": 0, "num_ctx": OLLAMA_CONTEXT},
+        options={"temperature": 0, "num_ctx": ollama_context(prompt)},
     )
 
     if response.done_reason == "length":
-        raise RuntimeError(f"{path} is too large to extract in one request")
+        raise RuntimeError(f"the model's reply was cut off; {path} may be too large")
     return schema_model.model_validate_json(response.message.content)
 
 
@@ -378,7 +397,12 @@ def extract_with_api(args):
 
 def extract_with_ollama(args):
     """Ollama mode. Returns the data, or None after printing an error."""
-    import ollama
+    try:
+        import ollama
+    except ImportError:
+        print("error: the ollama package is not installed; run: pip install ollama",
+              file=sys.stderr)
+        return None
     try:
         return extract_ollama(args.input, args.kind, model=args.model)
     except ollama.ResponseError as exc:
@@ -392,7 +416,7 @@ def extract_with_ollama(args):
               file=sys.stderr)
     except ValueError as exc:  # includes pydantic.ValidationError
         print(f"error: {args.model} returned data that does not fit the {args.kind} "
-              f"structure:\n{exc}", file=sys.stderr)
+              f"structure (a larger model may do better):\n{exc}", file=sys.stderr)
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
     return None
