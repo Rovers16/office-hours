@@ -12,7 +12,7 @@ The project report is [`report/report.pdf`](report/report.pdf).
 sudo apt install swi-prolog-nox   # only needed for the Prolog part (make ask / make test)
 pip install -r requirements.txt   # anthropic / ollama only for make MODE=api / MODE=ollama
 make                              # build, generate output/, write the Word file
-make test                         # check the report and the Prolog answers against tests/
+make test                         # check the report, the database and the Prolog answers against tests/
 make run                          # print the report on the screen
 make ask                          # answer the sample questions with Prolog
 make clean                        # remove build/ and output/
@@ -28,6 +28,7 @@ make report                       # rebuild the PDF report (report/report.html -
 | `output/office_hours.txt` | the report, in the style of the sample tables |
 | `output/office_hours.csv` | the same data for the Word generator |
 | `output/office_hours.docx` | the final Word document |
+| `output/office_hours.db` | the results as an SQLite database (see [Querying the database](#querying-the-database)) |
 | `output/office_hours.pl` | the program's results as Prolog facts |
 | `build/schedule.pl`, `build/faculty.pl` | the input data as Prolog facts |
 | `output/prolog_answers.txt` | answers to the sample questions (`make test`) |
@@ -108,6 +109,41 @@ OFFICE_HOUR|name|day|start|end|course
 
 Times are 24-hour `HH:MM`. Empty fields are allowed. Lines starting with `#`
 are comments. Bad lines are reported with the file name and line number.
+
+## Querying the database
+
+`make` also stores the results in an SQLite database, `output/office_hours.db`.
+The C program writes them as SQL (`build/officehours -s build/office_hours.sql`)
+and `make_db.py` loads that script with Python's built-in `sqlite3`, so nothing
+extra needs installing.
+
+| Table / view | Contents |
+|--------------|----------|
+| `professors` | `id`, `name`, `department`, `email`, `office`, `office_hours_source` (`generated` / `provided`) |
+| `courses` | `id`, `code`, `title`, `section`, `lecturer`, `room`, `start_time`, `end_time` (NULL for online courses) |
+| `course_days` | `course_id`, `day`, `day_number` (1 = Monday): the days each course meets |
+| `teaches` | `professor_id`, `course_id` |
+| `office_hours` | `professor_id`, `day`, `day_number`, `start_time`, `end_time`, `course_code` |
+| `class_schedule` (view) | every class meeting with the professor's name, day, times and room |
+| `office_hours_schedule` (view) | every office-hour block with the professor's name and office |
+
+Times are `HH:MM` text (24-hour), so they sort and compare correctly.
+
+```bash
+sudo apt install sqlite3              # the command-line tool (optional)
+sqlite3 -header -column output/office_hours.db
+
+sqlite> SELECT professor, start_time, end_time, course_code
+   ...> FROM office_hours_schedule WHERE day = 'Wednesday' ORDER BY start_time;
+sqlite> SELECT code, day, start_time, room FROM class_schedule
+   ...> WHERE professor LIKE '%Mensah' ORDER BY day_number, start_time;
+sqlite> .tables
+sqlite> .quit
+```
+
+Without the `sqlite3` tool, use Python:
+`python3 -c "import sqlite3; print(sqlite3.connect('output/office_hours.db').execute('SELECT * FROM professors').fetchall())"`.
+The file also opens in graphical tools such as *DB Browser for SQLite*.
 
 ## Asking questions with Prolog
 

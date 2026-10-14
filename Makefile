@@ -1,6 +1,7 @@
 # Makefile for the COSC 369 office-hours generator.
 #
-#   make            build everything and generate the output (default)
+#   make            build everything and generate the output (default),
+#                   including the SQLite database output/office_hours.db
 #   make lib        build only the static library build/libofficehours.a
 #   make run        print the generated report on the screen
 #   make ask        answer the sample questions with Prolog (needs SWI-Prolog + pyswip)
@@ -66,11 +67,13 @@ REPORT_TXT  = $(OUT_DIR)/office_hours.txt
 REPORT_CSV  = $(OUT_DIR)/office_hours.csv
 REPORT_DOCX = $(OUT_DIR)/office_hours.docx
 REPORT_PL   = $(OUT_DIR)/office_hours.pl
+REPORT_SQL  = $(BUILD_DIR)/office_hours.sql
+REPORT_DB   = $(OUT_DIR)/office_hours.db
 ANSWERS     = $(OUT_DIR)/prolog_answers.txt
 
 .PHONY: all lib run ask test report clean
 
-all: $(REPORT_TXT) $(REPORT_DOCX) $(SCHEDULE_PL) $(FACULTY_PL)
+all: $(REPORT_TXT) $(REPORT_DOCX) $(REPORT_DB) $(SCHEDULE_PL) $(FACULTY_PL)
 
 lib: $(LIB)
 
@@ -119,14 +122,19 @@ $(BUILD_DIR)/faculty.%: $(FACULTY_JSON) syllabus_reader.py | $(BUILD_DIR)
 
 # ---- Output -----------------------------------------------------------------
 
-# One run of the program writes the text report, the CSV and the Prolog facts.
+# One run of the program writes the text report, the CSV, the Prolog facts and the SQL.
 $(REPORT_TXT): $(PROGRAM) $(SCHEDULE_PSV) $(FACULTY_PSV) | $(OUT_DIR)
-	$(PROGRAM) -o $(REPORT_TXT) -c $(REPORT_CSV) -p $(REPORT_PL) $(SCHEDULE_PSV) $(FACULTY_PSV)
-$(REPORT_CSV) $(REPORT_PL): $(REPORT_TXT)
+	$(PROGRAM) -o $(REPORT_TXT) -c $(REPORT_CSV) -p $(REPORT_PL) -s $(REPORT_SQL) \
+	    $(SCHEDULE_PSV) $(FACULTY_PSV)
+$(REPORT_CSV) $(REPORT_PL) $(REPORT_SQL): $(REPORT_TXT)
 	@:
 
 $(REPORT_DOCX): $(REPORT_CSV) make_docx.py
 	$(PYTHON) make_docx.py $< $@
+
+# SQLite database, loaded from the SQL script with Python's built-in sqlite3.
+$(REPORT_DB): $(REPORT_SQL) make_db.py
+	$(PYTHON) make_db.py $< $@
 
 run: $(PROGRAM) $(SCHEDULE_PSV) $(FACULTY_PSV)
 	$(PROGRAM) $(SCHEDULE_PSV) $(FACULTY_PSV)
@@ -150,8 +158,9 @@ report/report.pdf: report/report.html report/img/docx_page.png report/build_pdf.
 
 # ---- Tests ----------------------------------------------------------------------
 
-test: $(REPORT_TXT) $(ANSWERS)
+test: $(REPORT_TXT) $(ANSWERS) $(REPORT_DB)
 	diff -u tests/expected_report.txt $(REPORT_TXT)
+	diff -u tests/expected_database.sql $(REPORT_SQL)
 	diff -u tests/expected_answers.txt $(ANSWERS)
 	@echo "all tests passed"
 

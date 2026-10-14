@@ -171,12 +171,15 @@ which stages are out of date.</p>
   <text class="t" x="538" y="48">office_hours.txt</text>
   <rect class="box" x="530" y="68" width="140" height="28" rx="4"/>
   <text class="t" x="538" y="86">office_hours.csv</text>
-  <rect class="box" x="530" y="106" width="140" height="28" rx="4"/>
-  <text class="t" x="538" y="124">office_hours.pl</text>
+  <rect class="stage" x="530" y="106" width="140" height="34" rx="5"/>
+  <text class="t" x="538" y="120">make_db.py</text>
+  <text class="s" x="538" y="133">&rarr; office_hours.db (SQLite)</text>
+  <rect class="box" x="530" y="152" width="140" height="28" rx="4"/>
+  <text class="t" x="538" y="170">office_hours.pl</text>
 
-  <rect class="stage" x="530" y="160" width="140" height="34" rx="5"/>
-  <text class="t" x="538" y="174">make_docx.py</text>
-  <text class="s" x="538" y="187">&rarr; office_hours.docx</text>
+  <rect class="stage" x="530" y="196" width="140" height="34" rx="5"/>
+  <text class="t" x="538" y="210">make_docx.py</text>
+  <text class="s" x="538" y="223">&rarr; office_hours.docx</text>
 
   <rect class="stage" x="350" y="160" width="150" height="80" rx="5"/>
   <text class="t" x="360" y="178">Prolog (SWI) + ask.py</text>
@@ -187,16 +190,18 @@ which stages are out of date.</p>
   <path class="ln" d="M130,50 H148"/>
   <path class="ln" d="M130,110 H148"/>
   <path class="ln" d="M320,80 H348"/>
-  <path class="ln" d="M500,60 L528,44"/>
-  <path class="ln" d="M500,80 L528,82"/>
-  <path class="ln" d="M500,100 L528,120"/>
-  <path class="ln" d="M670,82 H688 V177 H672"/>
-  <path class="ln" d="M530,124 C515,140 505,160 502,175"/>
+  <path class="ln" d="M500,50 L528,44"/>
+  <path class="ln" d="M500,75 L528,82"/>
+  <path class="ln" d="M500,100 L528,122"/>
+  <path class="ln" d="M500,122 L528,160"/>
+  <path class="ln" d="M670,82 H688 V213 H672"/>
+  <path class="ln" d="M530,174 L502,192"/>
   <path class="ln" d="M235,130 C235,200 280,200 348,200"/>
 </svg>
 <figcaption>Figure 1. Data flow. Rounded blue boxes are programs; white boxes are files.
 The schedule.pl and faculty.pl facts from stage 1, and the office_hours.pl facts from
-stage 2, are all loaded by Prolog.</figcaption>
+stage 2, are all loaded by Prolog. The C program also writes an SQL script, which
+make_db.py loads into the SQLite database.</figcaption>
 </figure>
 
 <p>The responsibilities are split deliberately. <strong>All scheduling decisions are made
@@ -326,7 +331,7 @@ a module are <code>static</code>.</p>
   <tr><td><code>timeutil.c / .h</code></td><td>Converting between text and numbers: <code>"09:30"</code> &harr; 570 &harr; <code>"9:30 AM"</code>, day names, day lists such as <code>"Monday, Wednesday &amp; Friday"</code>.</td><td><code>parse_time</code>, <code>format_time</code>, <code>parse_day_list</code>, <code>format_day_list</code></td></tr>
   <tr><td><code>loader.c / .h</code></td><td>Reading and validating the two input files.</td><td><code>load_schedule</code>, <code>load_faculty</code></td></tr>
   <tr><td><code>scheduler.c / .h</code></td><td>Matching professors to course sections; generating office hours or checking the ones lecturers provided.</td><td><code>match_courses</code>, <code>assign_office_hours</code>, <code>default_policy</code></td></tr>
-  <tr><td><code>report.c / .h</code></td><td>Writing the results as a text report, a CSV file and Prolog facts.</td><td><code>write_text_report</code>, <code>write_csv_report</code>, <code>write_prolog_facts</code></td></tr>
+  <tr><td><code>report.c / .h</code></td><td>Writing the results as a text report, a CSV file, Prolog facts and an SQL script for the database.</td><td><code>write_text_report</code>, <code>write_csv_report</code>, <code>write_prolog_facts</code>, <code>write_sql</code></td></tr>
   <tr><td><code>main.c</code></td><td>Command-line options, opening files, calling the library in order, exit status.</td><td><code>main</code></td></tr>
 </table>
 <p>The dependencies between modules point one way only. <code>model</code> depends on
@@ -472,7 +477,7 @@ office_hours.csv     ─▶ make_docx.py ─▶ output/office_hours.docx</pre>
 
 <table>
   <tr><th style="width:26%">Command</th><th>What it does</th></tr>
-  <tr><td><code>make</code></td><td>Everything: library, program, reports, Word document, Prolog facts.</td></tr>
+  <tr><td><code>make</code></td><td>Everything: library, program, reports, Word document, SQLite database, Prolog facts.</td></tr>
   <tr><td><code>make lib</code></td><td>Only <code>build/libofficehours.a</code>.</td></tr>
   <tr><td><code>make run</code></td><td>Prints the report on the screen.</td></tr>
   <tr><td><code>make ask</code></td><td>Answers the sample questions with Prolog.</td></tr>
@@ -483,9 +488,9 @@ office_hours.csv     ─▶ make_docx.py ─▶ output/office_hours.docx</pre>
 <p>Variables such as <code>CC</code>, <code>CFLAGS</code> and <code>PYTHON</code> are set with
 <code>?=</code>, so they can be overridden on the command line. For example,
 <code>make CFLAGS="... -Werror"</code> makes warnings fatal, which is how the code was checked
-to compile without any warnings. One program run writes three output files. To keep this
-compatible with older versions of GNU make, the text report is the real target and the CSV
-and Prolog files depend on it, rather than using the newer &ldquo;grouped targets&rdquo;
+to compile without any warnings. One program run writes four output files. To keep this
+compatible with older versions of GNU make, the text report is the real target and the CSV,
+Prolog and SQL files depend on it, rather than using the newer &ldquo;grouped targets&rdquo;
 syntax.</p>
 
 <!-- ===================================================================== -->
@@ -573,13 +578,48 @@ document's appearance can change without touching the scheduler.</p>
   <figcaption>Figure 2. First page of the generated <code>output/office_hours.docx</code>.</figcaption>
 </figure>
 
+<h3>10.1 SQLite database</h3>
+<p>The results are also stored in an SQLite database, <code>output/office_hours.db</code>, so
+they can be queried with SQL or opened in database tools. The C program writes them as an SQL
+script (<code>-s build/office_hours.sql</code>) and <code>make_db.py</code> executes it with
+Python's built-in <code>sqlite3</code> module. As with the Word document, the C program makes
+every decision and Python only stores the result, so no database library has to be linked
+into the C program. Text values are written as SQL string literals with quotes doubled, so a
+name such as O'Neil, or text that looks like SQL, is stored as plain data.</p>
+<table>
+  <tr><th style="width:27%">Table / view</th><th>Columns</th></tr>
+  <tr><td><code>professors</code></td><td><code>id</code>, <code>name</code>, <code>department</code>, <code>email</code>, <code>office</code>, <code>office_hours_source</code> (generated / provided)</td></tr>
+  <tr><td><code>courses</code></td><td><code>id</code>, <code>code</code>, <code>title</code>, <code>section</code>, <code>lecturer</code>, <code>room</code>, <code>start_time</code>, <code>end_time</code> (NULL for online courses)</td></tr>
+  <tr><td><code>course_days</code></td><td><code>course_id</code>, <code>day</code>, <code>day_number</code> (1 = Monday)</td></tr>
+  <tr><td><code>teaches</code></td><td><code>professor_id</code>, <code>course_id</code></td></tr>
+  <tr><td><code>office_hours</code></td><td><code>professor_id</code>, <code>day</code>, <code>day_number</code>, <code>start_time</code>, <code>end_time</code>, <code>course_code</code></td></tr>
+  <tr><td><code>class_schedule</code> (view)</td><td>every class meeting with the professor's name, day, times and room</td></tr>
+  <tr><td><code>office_hours_schedule</code> (view)</td><td>every office-hour block with the professor's name and office</td></tr>
+</table>
+<p>The tables are normalised: meeting days have their own table rather than a list in one
+column, and foreign keys link office hours and teaching assignments to professors and
+courses. <code>make_db.py</code> checks those links (<code>PRAGMA foreign_key_check</code>)
+before it replaces the database file. The two views give the everyday questions a short
+query:</p>
+<pre>$ sqlite3 -header -column output/office_hours.db \
+    "SELECT professor, start_time, end_time, course_code FROM office_hours_schedule
+     WHERE day = 'Wednesday' ORDER BY start_time"
+professor         start_time  end_time  course_code
+----------------  ----------  --------  -----------
+Dr. Kwame Mensah  10:45       13:00     COSC 330
+Dr. Linda Okafor  13:00       15:00     COSC 241
+Dr. Kwame Mensah  15:00       17:00     COSC 631</pre>
+
 <!-- ===================================================================== -->
 <h2>11. Testing</h2>
 <ul>
-  <li><strong>Regression test.</strong> <code>make test</code> regenerates the report and the
-  Prolog answers and compares them, using <code>diff</code>, with
-  <code>tests/expected_report.txt</code> and <code>tests/expected_answers.txt</code>. Any
-  change in behaviour shows up as a readable difference.</li>
+  <li><strong>Regression test.</strong> <code>make test</code> regenerates the report, the
+  database's SQL script and the Prolog answers, builds the database, and compares them, using
+  <code>diff</code>, with <code>tests/expected_report.txt</code>,
+  <code>tests/expected_database.sql</code> and <code>tests/expected_answers.txt</code>. Any
+  change in behaviour shows up as a readable difference. The SQL output was also tested with
+  apostrophes, SQL-like text and empty fields, and a broken script is rejected without
+  leaving a partial database behind.</li>
   <li><strong>Edge cases.</strong> These were tested with a separate set of inputs:
     <ul>
       <li>back-to-back classes (a gap too short after the first, so its block moves before it);</li>
