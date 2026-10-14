@@ -29,4 +29,13 @@ void write_csv_report(FILE *out, const Faculty *faculty, const Schedule *schedul
  */
 void write_prolog_facts(FILE *out, const Faculty *faculty, const Schedule *schedule);
 
+/*
+ * The program's results as an SQL script for SQLite (make_db.py turns it into
+ * output/office_hours.db). Tables: professors, courses, course_days, teaches,
+ * office_hours; views: class_schedule, office_hours_schedule. Times are
+ * 'HH:MM' text (NULL for online / TBA courses); days are full names with a
+ * day_number (1 = Monday) for sorting.
+ */
+void write_sql(FILE *out, const Faculty *faculty, const Schedule *schedule);
+
 #endif /* REPORT_H */
